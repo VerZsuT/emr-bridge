@@ -1,4 +1,4 @@
-# emr-bridge
+# Electron main-renderer bridge (emr-bridge)
 
 _Only for Electron_  
 JS library for easily providing access to the **main** from the **renderer** process
