@@ -1,0 +1,50 @@
+{
+  "name": "emr-bridge",
+  "version": "1.0.0",
+  "description": "Allows you to easily give access to main methods from the renderer process",
+  "main": "lib/index.js",
+  "scripts": {
+    "compile": "tsc --project ./tsconfig.json"
+  },
+  "types": "lib/index.d.ts",
+  "files": [
+    "lib"
+  ],
+  "typesVersions": {
+    "*": {
+      ".": [
+        "./lib/index.d.ts"
+      ],
+      "renderer": [
+        "./lib/renderer.d.ts"
+      ],
+      "preload": [
+        "./lib/preload.d.ts"
+      ],
+      "main": [
+        "./lib/index.d.ts"
+      ]
+    }
+  },
+  "exports": {
+    ".": "./lib/index.js",
+    "./renderer": "./lib/renderer.js",
+    "./preload": "./lib/preload.js",
+    "./main": "./lib/index.js",
+    "./package.json": "./package.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/VerZsuT/emr-bridge.git"
+  },
+  "keywords": [
+    "electron",
+    "ipc"
+  ],
+  "author": "VerZsuT",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^21.0.1",
+    "typescript": "^4.8.4"
+  }
+}
