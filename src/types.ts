@@ -7,6 +7,26 @@ export interface IIPCResult {
   promiseChannel?: string
 }
 
+export interface IPublishMethodArgs {
+  name?: string
+  scope?: Scope
+}
+
+export interface IPublishPropertyArgs {
+  name?: string
+  scope?: Scope
+  access?: Access
+}
+
+export interface ICreateProviderArgs {
+  info: IInfo
+  scope: Scope
+  callFunction(name: string, ...args: any[]): IIPCResult
+  getVariable(name: string): IIPCResult
+  setVariable(name: string, value: any): IIPCResult | undefined
+  waitPromise(channel: string): Promise<any>
+}
+
 export interface IScopes {
   [name: string]: Set<Scope>
 }
@@ -21,8 +41,6 @@ export interface IRendererPublic {
 
 export interface IProvider {
   getInfo(): IInfo
-  getScopes(): IScopes
-  getAccesses(): IAccesses
   waitPromise(name: string, resolve: (value: any) => void, reject?: (reason?: any) => void): void
   provided: {
     functions: {
@@ -44,4 +62,6 @@ export type PublicProperty = {
 export interface IInfo {
   properties: Set<string>
   functions: Set<string>
+  scopes: IScopes
+  accesses: IAccesses
 }

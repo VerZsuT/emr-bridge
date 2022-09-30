@@ -1,1 +1,1 @@
-export { Bridge } from './bridge'
+export { Bridge } from './scripts/Bridge'

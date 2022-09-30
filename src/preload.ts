@@ -1,2 +1,2 @@
-export { Main } from './main'
-export { provideFromMain } from './provider'
+export { Main } from './scripts/Main'
+export { provideFromMain } from './scripts/preloadProvider'

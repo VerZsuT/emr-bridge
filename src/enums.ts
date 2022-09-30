@@ -9,9 +9,7 @@ export enum Scope {
 }
 
 export enum IPCChannel {
-  getPublicScopes = 'GET_PUBLIC_SCOPES',
   getPublicInfo = 'GET_PUBLIC_INFO',
-  getPublicAccesses = 'GET_PUBLIC_ACCESSES',
   functionCall = 'FUNCTION_CALL_',
   propertyGet = 'PROPERTY_GET_',
   propertySet = 'PROPERTY_SET_',

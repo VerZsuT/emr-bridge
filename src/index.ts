@@ -1,6 +1,4 @@
 export {
-  scope,
-  access,
   publicMethod,
   publicProperty,
   publicFunction,
@@ -8,6 +6,6 @@ export {
   publicStaticMethod,
   publicStaticProperty,
   providePublic
-} from './publish'
+} from './scripts/publish'
 export { Access, Scope } from './enums'
-export type { PublicFunction, PublicProperty } from './types'
+export type { PublicFunction, PublicProperty, IPublishPropertyArgs, IPublishMethodArgs } from './types'

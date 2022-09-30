@@ -13,6 +13,7 @@ JS library for easily providing access to the **main** from the **renderer** pro
   - [scopes](#scopes)
   - [access](#restricting-access-to-variables)
   - [usage in renderer](#access-from-renderer-and-preload)
+  - [promises](#promises)
 
 ## Installation
 
@@ -41,14 +42,14 @@ Use **publicStaticMethod**/**publicStaticProperty** decorators
 
 ```ts
 // Main process
-import { publicStaticMethod, publicStaticProperty, access, Access } from 'emr-bridge'
+import { publicStaticMethod, publicStaticProperty, Access } from 'emr-bridge'
 
 class User {
   private static name = 'Name'
   private static age = 20
   private static money = 1000
   
-  @publicStaticProperty()
+  @publicStaticProperty('userBalance')
   static get balance(): string {
     return `${this.money}$`
   }
@@ -57,12 +58,14 @@ class User {
     this.money = Number(newBalance.split('$')[0])
   }
   
-  @publicStaticProperty('userInfo')
+  @publicStaticProperty({
+    name: 'userInfo',
+    access: Access.get
+  })
   static get info(): string {
     return `Name: '${this.name}'; Age: '${this.age}'; Money: '${this.money}';`
   }
   
-  @access(Access.get)
   @publicStaticMethod()
   static setName(newName: string): void {
     this.name = newName
@@ -79,9 +82,11 @@ class User {
 
 Use **providePublic** and **publicMethod**/**publicProperty** decorators.
 
+Without calling **providePublic**, public methods will not be accessible from renderer.
+
 ```ts
 // Main process
-import { providePublic, publicMethod, publicProperty, access, Access } from 'emr-bridge'
+import { providePublic, publicMethod, publicProperty, Access } from 'emr-bridge'
 
 class User {
   private name = 'Name'
@@ -97,8 +102,10 @@ class User {
     this.money = Number(newBalance.split('$')[0])
   }
   
-  @access(Access.get)
-  @publicProperty('userInfo')
+  @publicProperty({
+    name: 'userInfo',
+    access: Access.get
+  })
   get info(): string {
     return `Name: '${this.name}'; Age: '${this.age}'; Money: '${this.money}';`
   }
@@ -125,8 +132,8 @@ Use **publicFunction** and **publicVariable**.
 // Main process
 import { publicFunction, publicVariable } from 'emr-bridge'
 
-publicFunction(sayHello, 'sayHello')
-publicFunction(getName, 'getUserName')
+publicFunction('sayHello', sayHello)
+publicFunction('getUserName', getName)
 publicVariable('count', {
   get: () => count,
   set: (value: number) => count = value
@@ -150,32 +157,37 @@ function getName(): string {
 
 ### Scopes
 
-In order to set a specific scope, use the **scope** decorator
+In order to set a specific scope, use the **scope** property.
+
+Accessing an entity outside the specified scope will result in an error being thrown.
 
 ```ts
 // Main process
 
 // static and non-static
-import { scope, Scope, providePublic, publicStaticMethod, publicMethod, publicProperty } from 'emr-bridge'
+import { Scope, Access, providePublic, publicStaticMethod, publicMethod, publicProperty } from 'emr-bridge'
 
 class User {
   private static age = 20
   private name = 'Name'
-
-  @scope(Scope.preload)
-  @publicProperty()
+  
+  @publicProperty({
+    scope: Scope.preload,
+    access: Access.get
+  })
   get count(): number {
     return 30
   }
-
-  @scope(Scope.preload)
-  @publicStaticMethod()
+  
+  @publicStaticMethod({ scope: Scope.preload })
   static getAge(): number {
     return this.age
   }
-
-  @scope(Scope.renderer)
-  @publicMethod('getUserName')
+  
+  @publicMethod({
+    name: 'getUserName',
+    scope: Scope.renderer
+  })
   getName(): string {
     return this.name
   }
@@ -186,7 +198,7 @@ providePublic(new User())
 // functions and variables
 import { publicFunction, publicVariable, Scope } from 'emr-bridge'
 
-publicFunction(getName, 'getName', [Scope.preload])
+publicFunction('getName', getName, [Scope.preload])
 publicVariable('count', {
   get: () => count,
   set: (value: number) => count = value
@@ -208,20 +220,21 @@ Using an entity outside the specified scope _will cause an error_.
 // Main process
 
 // static and non-static
-import { publicStaticProperty, publicProperty, providePublic, access, Access } from 'emr-bridge'
+import { publicStaticProperty, publicProperty, providePublic, Access } from 'emr-bridge'
 
 class User {
   private static name = 'Name'
   private static surname = 'Surname'
   
-  @access(Access.get)
-  @publicStaticProperty()
+  @publicStaticProperty({ access: Access.get })
   static get fullName(): string {
     return `${this.name} ${this.surname}`
   }
   
-  @access(Access.get)
-  @publicProperty('userAge')
+  @publicProperty({
+    name: 'userAge',
+    access: Access.get
+  })
   get age(): number {
     return 20
   }
@@ -280,4 +293,32 @@ const bridge = Bridge.as<ProvidedPubic>()
 bridge.getUserName()
 bridge.count--
 bridge.setUserAge(30)
+```
+
+### Promises
+
+The library also allows you to pass Promises from main to renderer
+
+```ts
+// Main process
+import { publicFunction } from 'emr-bridge'
+
+publicFunction('delay1s', () => {
+  return new Promise<void>(resolve => {
+    setTimeout(resolve, 1000)
+  })
+})
+```
+
+```ts
+// Renderer process
+import { Bridge } from 'emr-bridge/renderer'
+
+interface IPublic {
+  delay1s(): Promise<void>
+}
+
+const bridge = Bridge.as<IPublic>()
+
+bridge.delay1s().then(() => console.log('After 1 second'))
 ```
