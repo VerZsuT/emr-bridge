@@ -1,6 +1,10 @@
 import type { Scope } from './enums'
 import { Access } from './enums'
 
+export interface ITarget {
+  as<T>(): T
+}
+
 export interface IIPCResult {
   value?: any
   error?: string
@@ -27,13 +31,8 @@ export interface ICreateProviderArgs {
   waitPromise(channel: string): Promise<any>
 }
 
-export interface IScopes {
-  [name: string]: Set<Scope>
-}
-
-export interface IAccesses {
-  [name: string]: Set<Access>
-}
+export type Scopes = Record<string, Set<Scope>>
+export type Accesses = Record<string, Set<Access>>
 
 export interface IRendererPublic {
   __register__?(instance: any): void
@@ -43,12 +42,8 @@ export interface IProvider {
   getInfo(): IInfo
   waitPromise(name: string, resolve: (value: any) => void, reject?: (reason?: any) => void): void
   provided: {
-    functions: {
-      [key: string]: (...args: any[]) => IIPCResult
-    },
-    properties: {
-      [key: string]: IIPCResult
-    }
+    functions: Record<string, (...args: any[]) => IIPCResult>,
+    properties: Record<string, IIPCResult>
   }
 }
 
@@ -62,6 +57,6 @@ export type PublicProperty = {
 export interface IInfo {
   properties: Set<string>
   functions: Set<string>
-  scopes: IScopes
-  accesses: IAccesses
+  scopes: Scopes
+  accesses: Accesses
 }

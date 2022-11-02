@@ -1,11 +1,11 @@
-export {
-  publicMethod,
-  publicProperty,
-  publicFunction,
-  publicVariable,
-  publicStaticMethod,
-  publicStaticProperty,
-  providePublic
-} from './scripts/publish'
 export { Access, Scope } from './enums'
-export type { PublicFunction, PublicProperty, IPublishPropertyArgs, IPublishMethodArgs } from './types'
+export {
+  providePublic, publicFunction, publicMethod,
+  publicProperty, publicStaticMethod,
+  publicStaticProperty, publicVariable
+} from './scripts/publish'
+export type {
+  IPublishMethodArgs, IPublishPropertyArgs, PublicFunction,
+  PublicProperty
+} from './types'
+

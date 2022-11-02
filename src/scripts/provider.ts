@@ -1,78 +1,71 @@
-import type { ICreateProviderArgs } from '../types'
 import { Access, Scope } from '../enums'
+import type { ICreateProviderArgs, ITarget } from '../types'
 
 function errorHandler(error: string, channel: string): void {
   console.error(`Error on ${channel}.\n${error}`.replace('Error: ', ''))
 }
 
-export interface ITarget {
-  as<T>(): T
-}
-
 export function createProvider(args: ICreateProviderArgs): ITarget {
   const { info, scope, getVariable, setVariable, callFunction, waitPromise } = args
 
-  const target: any = {
+  const target: ITarget = {
     as: <T>(): T => proxy
   }
 
   info.functions.forEach(funcName => {
-    if (info.scopes[funcName].has(scope)) {
-      Object.defineProperty(target, funcName, {
-        get: () => (...args: any[]) => {
+    if (!info.scopes[funcName].has(scope)) return
+
+    Object.defineProperty(target, funcName, {
+      get() {
+        return (...args: any[]) => {
           const result = callFunction(funcName, ...args)
           if (result.error) {
             errorHandler(result.error, funcName)
             return
           }
-          if (result.promiseChannel) {
+
+          if (result.promiseChannel)
             return waitPromise(result.promiseChannel)
-          }
+
           return result.value
-        },
-        set: () => {
-          throw new Error(`Function '${funcName}' is readonly`)
-        },
-        enumerable: true
-      })
-    }
+        }
+      },
+      set() {
+        throw new Error(`Function '${funcName}' is readonly`)
+      },
+      enumerable: true
+    })
   })
 
   info.properties.forEach(propName => {
-    if (info.scopes[propName].has(scope)) {
-      let getter = (): any => {
-        const result = getVariable(propName)
-        if (result.error) {
-          errorHandler(result.error, propName)
-          return
-        }
-        return result.value
-      }
-      let setter = (value: any): void => {
-        const result = setVariable(propName, value)
-        if (result?.error) {
-          errorHandler(result.error, propName)
-          return
-        }
-      }
+    if (!info.scopes[propName].has(scope)) return
 
-      if (!info.accesses[propName].has(Access.get)) {
-        getter = () => {
-          throw new Error(`No access to getting the '${propName}' property`)
-        }
+    let getter = (): any => {
+      const result = getVariable(propName)
+      if (result.error) {
+        errorHandler(result.error, propName)
+        return
       }
-      if (!info.accesses[propName].has(Access.set)) {
-        setter = () => {
-          throw new Error(`No access to setting the '${propName}' property`)
-        }
-      }
-
-      Object.defineProperty(target, propName, {
-        get: getter,
-        set: setter,
-        enumerable: true
-      })
+      return result.value
     }
+    let setter = (value: any): void => {
+      const result = setVariable(propName, value)
+      if (result?.error) {
+        errorHandler(result.error, propName)
+        return
+      }
+    }
+
+    if (!info.accesses[propName].has(Access.get))
+      getter = () => { throw new Error(`No access to getting the '${propName}' property`) }
+    if (!info.accesses[propName].has(Access.set))
+      setter = () => { throw new Error(`No access to setting the '${propName}' property`) }
+
+    Object.defineProperty(target, propName, {
+      get: getter,
+      set: setter,
+      enumerable: true
+    })
   })
 
   const proxy = new Proxy(target, {
@@ -82,17 +75,14 @@ export function createProvider(args: ICreateProviderArgs): ITarget {
       const isFunction = info.functions.has(key)
       const isProperty = info.properties.has(key)
 
-      if (!isFunction && !isProperty) {
+      if (!isFunction && !isProperty)
         throw new Error(`'${key}' is not provided from main`)
-      }
 
-      if (!info.scopes[key].has(Scope.renderer)) {
+      if (!info.scopes[key].has(Scope.renderer))
         throw new Error(`'${key}' is not provided into renderer scope`)
-      }
 
-      if (isProperty && !info.accesses[key].has(Access.get)) {
+      if (isProperty && !info.accesses[key].has(Access.get))
         throw new Error(`No access to getting the '${key}' property`)
-      }
 
       throw new Error(`Unknown error on get '${key}'`)
     },
@@ -105,21 +95,17 @@ export function createProvider(args: ICreateProviderArgs): ITarget {
       const isFunction = info.functions.has(key)
       const isProperty = info.properties.has(key)
 
-      if (isFunction) {
+      if (isFunction)
         throw new Error(`Function '${key}' is readonly`)
-      }
 
-      if (!isProperty) {
+      if (!isProperty)
         throw new Error(`Property '${key}' is not provided from main`)
-      }
 
-      if (!info.scopes[key].has(Scope.renderer)) {
+      if (!info.scopes[key].has(Scope.renderer))
         throw new Error(`'${key}' is not provided into renderer scope`)
-      }
 
-      if (!info.accesses[key].has(Access.set)) {
+      if (!info.accesses[key].has(Access.set))
         throw new Error(`No access to setting the '${key}' property`)
-      }
 
       throw new Error(`Unknown error on set '${key}'`)
     },

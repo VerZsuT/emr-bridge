@@ -1,29 +1,17 @@
 {
   "compilerOptions": {
-    "experimentalDecorators": true,
     "target": "ESNext",
-    "lib": [
-      "ESNext",
-      "DOM",
-      "DOM.Iterable"
-    ],
-    "incremental": true,
-    "isolatedModules": true,
     "module": "ESNext",
-    "allowSyntheticDefaultImports": true,
-    "allowUnreachableCode": false,
-    "esModuleInterop": true,
-    "sourceMap": false,
-    "outDir": "./lib",
-    "newLine": "LF",
-    "noImplicitAny": false,
-    "strict": true,
     "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "declaration": true,
-    "emitDeclarationOnly": false,
-    "skipLibCheck": true,
-    "baseUrl": "."
+    "newLine": "LF",
+    "outDir": "./lib",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "strict": true,
+    "experimentalDecorators": true,
+    "isolatedModules": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "declaration": true
   },
   "include": [
     "./src/**/*.ts",

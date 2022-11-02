@@ -44,7 +44,7 @@
   "author": "VerZsuT",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^21.0.1",
+    "electron": "^21.2.1",
     "typescript": "^4.8.4"
   }
 }

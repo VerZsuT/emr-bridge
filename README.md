@@ -17,7 +17,7 @@ JS library for easily providing access to the **main** from the **renderer** pro
 
 ## Installation
 
-```
+```text
 npm i emr-bridge
 ```
 
@@ -27,7 +27,7 @@ There are three ways to use
 
 **IMPORTANT**: In any of the cases, you need to insert this code into preload
 
-```ts
+```js
 // Preload process
 import { provideFromMain } from 'emr-bridge/preload'
 
@@ -135,8 +135,12 @@ import { publicFunction, publicVariable } from 'emr-bridge'
 publicFunction('sayHello', sayHello)
 publicFunction('getUserName', getName)
 publicVariable('count', {
-  get: () => count,
-  set: (value: number) => count = value
+  get(): number {
+    return count
+  },
+  set(value: number) {
+    count = value
+  }
 })
 
 let count = 0
@@ -200,8 +204,12 @@ import { publicFunction, publicVariable, Scope } from 'emr-bridge'
 
 publicFunction('getName', getName, [Scope.preload])
 publicVariable('count', {
-  get: () => count,
-  set: (value: number) => count = value
+  get(): number {
+    return count
+  },
+  set(value: number) {
+    count = value
+  }
 }, [Scope.renderer])
 
 let count = 0
@@ -246,8 +254,14 @@ providePublic(new User())
 import { publicVariable } from 'emr-bridge'
 
 publicVariable('count', {
-  get: () => count, // get access
-  set: (value: number) => count = value // set access
+  // get access
+  get(): number {
+    return count
+  },
+  // set access
+  set(value: number) {
+    count = value
+  }
 })
 
 let count = 0

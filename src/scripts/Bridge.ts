@@ -1,10 +1,9 @@
-import { createProvider } from './provider'
-import type { IIPCResult } from '../types'
 import { Scope } from '../enums'
+import type { IIPCResult } from '../types'
+import { createProvider } from './provider'
 
-if (!window.__provider__) {
+if (!window.__provider__)
   throw new Error('Required methods not provided. Did you forget to call "provide" in preload?')
-}
 
 const provider = window.__provider__
 const info = provider.getInfo()

@@ -1,54 +1,55 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { IInfo, IIPCResult, IProvider } from '../types'
 import { IPCChannel } from '../enums'
+import type { IInfo, IIPCResult, IProvider } from '../types'
 
-const info = ipcRenderer.sendSync(IPCChannel.getPublicInfo) as IInfo
+const info: IInfo = ipcRenderer.sendSync(IPCChannel.getPublicInfo)
 
 /**
  * Sets access to main from renderer
+ * 
+ * @param contextIsolation - _default_: `true`
  */
 export function provideFromMain(contextIsolation = true): void {
-  const provider = {
-    getInfo: (): IInfo => info,
+  const provider: IProvider = {
+    getInfo(): IInfo {
+      return info
+    },
     waitPromise(channel: string, resolve: (value: any) => void, reject?: (reason?: any) => void): void {
       ipcRenderer.once(channel, (_, result: IIPCResult) => {
-        if (result.error) reject?.(result.error)
-        else resolve(result.value)
+        if (result.error)
+          reject?.(result.error)
+        else
+          resolve(result.value)
       })
     },
     provided: {
       properties: {},
       functions: {}
     }
-  } as IProvider
+  }
 
   info.functions.forEach(funcName => {
     Object.defineProperty(provider.provided.functions, funcName, {
-      value: (...args: any[]): IIPCResult => {
-        const channel = IPCChannel.functionCall + funcName
-        return ipcRenderer.sendSync(channel, ...args) as IIPCResult
+      value(...args: any[]): IIPCResult {
+        return ipcRenderer.sendSync(IPCChannel.functionCall + funcName, ...args)
       },
       enumerable: true
     })
   })
   info.properties.forEach(propName => {
     Object.defineProperty(provider.provided.properties, propName, {
-      get: () => {
-        const channel = IPCChannel.propertyGet + propName
-        return ipcRenderer.sendSync(channel) as IIPCResult
+      get(): IIPCResult {
+        return ipcRenderer.sendSync(IPCChannel.propertyGet + propName)
       },
-      set: value => {
-        const channel = IPCChannel.propertySet + propName
-        ipcRenderer.sendSync(channel, value)
+      set(value: any) {
+        ipcRenderer.sendSync(IPCChannel.propertySet + propName, value)
       },
       enumerable: true
     })
   })
 
-  if (contextIsolation) {
+  if (contextIsolation)
     contextBridge.exposeInMainWorld('__provider__', provider)
-  }
-  else {
+  else
     window.__provider__ = provider
-  }
 }
