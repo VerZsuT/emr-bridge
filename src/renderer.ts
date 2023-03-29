@@ -1,1 +1,2 @@
-export { Bridge } from './scripts/Bridge'
+export { default as Bridge } from './scripts/Bridge'
+

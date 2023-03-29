@@ -1,4 +1,5 @@
 lib
 node_modules
 .idea
-emr-bridge-*.tgz
+emr-bridge*.tgz
+.vscode

@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { IPCChannel } from '../enums'
-import type { IInfo, IIPCResult, IProvider } from '../types'
+import type { IIPCResult, IInfo, IProvider } from '../types'
 
 const info: IInfo = ipcRenderer.sendSync(IPCChannel.getPublicInfo)
 
@@ -9,7 +9,7 @@ const info: IInfo = ipcRenderer.sendSync(IPCChannel.getPublicInfo)
  * 
  * @param contextIsolation - _default_: `true`
  */
-export function provideFromMain(contextIsolation = true): void {
+function provideFromMain(contextIsolation = true): void {
   const provider: IProvider = {
     getInfo(): IInfo {
       return info
@@ -53,3 +53,5 @@ export function provideFromMain(contextIsolation = true): void {
   else
     window.__provider__ = provider
 }
+
+export default provideFromMain

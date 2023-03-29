@@ -1,7 +1,7 @@
 import { ipcRenderer } from 'electron'
 import { IPCChannel, Scope } from '../enums'
-import type { IInfo, IIPCResult } from '../types'
-import { createProvider } from './provider'
+import type { IIPCResult, IInfo } from '../types'
+import createProvider from './provider'
 
 const info: IInfo | undefined = ipcRenderer.sendSync(IPCChannel.getPublicInfo)
 
@@ -13,7 +13,7 @@ if (!info)
  *
  * _only for preload process_
  */
-export const Main = createProvider({
+const Main = createProvider({
   info,
   scope: Scope.preload,
   callFunction(name: string, ...args): IIPCResult {
@@ -36,3 +36,5 @@ export const Main = createProvider({
     })
   }
 })
+
+export default Main

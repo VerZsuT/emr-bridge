@@ -1,6 +1,6 @@
 import { Scope } from '../enums'
 import type { IIPCResult } from '../types'
-import { createProvider } from './provider'
+import createProvider from './provider'
 
 if (!window.__provider__)
   throw new Error('Required methods not provided. Did you forget to call "provide" in preload?')
@@ -13,7 +13,7 @@ const info = provider.getInfo()
  *
  * _only for renderer process_
  */
-export const Bridge = createProvider({
+const Bridge = createProvider({
   info,
   scope: Scope.renderer,
   callFunction(name: string, ...args): IIPCResult {
@@ -32,3 +32,5 @@ export const Bridge = createProvider({
     })
   }
 })
+
+export default Bridge

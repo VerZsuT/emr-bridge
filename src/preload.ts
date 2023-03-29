@@ -1,2 +1,3 @@
-export { Main } from './scripts/Main'
-export { provideFromMain } from './scripts/preloadProvider'
+export { default as Main } from './scripts/Main'
+export { default as provideFromMain } from './scripts/preloadProvider'
+

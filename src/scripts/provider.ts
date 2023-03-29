@@ -5,7 +5,7 @@ function errorHandler(error: string, channel: string): void {
   console.error(`Error on ${channel}.\n${error}`.replace('Error: ', ''))
 }
 
-export function createProvider(args: ICreateProviderArgs): ITarget {
+function createProvider(args: ICreateProviderArgs): ITarget {
   const { info, scope, getVariable, setVariable, callFunction, waitPromise } = args
 
   const target: ITarget = {
@@ -118,3 +118,5 @@ export function createProvider(args: ICreateProviderArgs): ITarget {
   })
   return proxy
 }
+
+export default createProvider

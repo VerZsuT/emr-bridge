@@ -2,11 +2,8 @@ import { ipcMain } from 'electron'
 
 import { Access, IPCChannel, Scope } from '../enums'
 import type {
-  IInfo,
   IIPCResult,
-  IPublishMethodArgs,
-  IPublishPropertyArgs,
-  IRendererPublic,
+  IInfo,
   PublicFunction,
   PublicProperty
 } from '../types'
@@ -19,178 +16,6 @@ const publicInfo: IInfo = {
 }
 
 ipcMain.on(IPCChannel.getPublicInfo, e => e.returnValue = publicInfo)
-
-/**
- * Makes the method available for **renderer** and **preload** processes.
- *
- * _only for static_
- */
-export function publicStaticMethod(): MethodDecorator
-/**
- * Makes the method available for **renderer** and **preload** processes.
- *
- * _only for static_
- * @param name - name by which the method will be accessed
- */
-export function publicStaticMethod(name: string): MethodDecorator
-/**
- * Makes the method available for **renderer** and **preload** processes.
- *
- * _only for static_
- * @param args - publish args
- */
-export function publicStaticMethod(args: IPublishMethodArgs): MethodDecorator
-export function publicStaticMethod(arg?: string | IPublishMethodArgs): MethodDecorator {
-  return (target: any, key: string | symbol) => {
-    let name = String(key)
-    
-    if (arg) {
-      if (typeof arg === 'string') {
-        name = arg
-      }
-      else {
-        name = arg.name ?? String(key)
-        if (arg.scope) scope(name, arg.scope)
-      }
-    }
-
-    publicFunction(name, (...args: any[]) => target[key](...args))
-  }
-}
-
-/**
- * Makes the method available for **renderer** and **preload** processes.
- *
- * _only for non-static_
- *
- * _required `providePublic(classInstance)`_
- */
-export function publicMethod(): MethodDecorator
-/**
- * Makes the method available for **renderer** and **preload** processes.
- *
- * _only for non-static_
- *
- * _required `providePublic(classInstance)`_
- * @param name - name by which the method will be accessed
- */
-export function publicMethod(name: string): MethodDecorator
-/**
- * Makes the method available for **renderer** and **preload** processes.
- *
- * _only for non-static_
- *
- * _required `providePublic(classInstance)`_
- * @param args - publish args
- */
-export function publicMethod(args: IPublishMethodArgs): MethodDecorator
-export function publicMethod(arg?: string | IPublishMethodArgs): MethodDecorator {
-  return (tgt: any, key: string | symbol, _) => {
-    const target: IRendererPublic = tgt
-    const prevRegister = target.__register__ ?? (() => {})
-    target.__register__ = instance => {
-      prevRegister(instance)
-      publicStaticMethod(<string> arg)(instance, key, _)
-    }
-  }
-}
-
-/**
- * Makes the property available for **renderer** and **preload** processes.
- *
- * _only for static_
- */
-export function publicStaticProperty(): PropertyDecorator
-/**
- * Makes the property available for **renderer** and **preload** processes.
- *
- * _only for static_
- * @param name - name by which the property will be accessed
- */
-export function publicStaticProperty(name: string): PropertyDecorator
-/**
- * Makes the property available for **renderer** and **preload** processes.
- *
- * _only for static_
- * @param args - publish args
- */
-export function publicStaticProperty(args: IPublishPropertyArgs): PropertyDecorator
-export function publicStaticProperty(arg?: string | IPublishPropertyArgs): PropertyDecorator {
-  return (target: any, key: string | symbol) => {
-    let name = String(key)
-    if (arg) {
-      if (typeof arg === 'string') {
-        name = arg
-      }
-      else {
-        name = arg.name ?? String(key)
-        if (arg.scope) scope(name, arg.scope)
-        if (arg.access) access(name, arg.access)
-      }
-    }
-
-    publicVariable(name, {
-      get() {
-        return target[key]
-      },
-      set(value: any) {
-        target[key] = value
-      }
-    })
-  }
-}
-
-/**
- * Makes the property available for **renderer** and **preload** processes.
- *
- * _only for non-static_
- *
- * _required `providePublic(classInstance)`_
- */
-export function publicProperty(): PropertyDecorator
-/**
- * Makes the property available for **renderer** and **preload** processes.
- *
- * _only for non-static_
- *
- * _required `providePublic(classInstance)`_
- * @param name - name by which the property will be accessed
- */
-export function publicProperty(name: string): PropertyDecorator
-/**
- * Makes the property available for **renderer** and **preload** processes.
- *
- * _only for non-static_
- *
- * _required `providePublic(classInstance)`_
- * @param args - publish args
- */
-export function publicProperty(args: IPublishPropertyArgs): PropertyDecorator
-export function publicProperty(arg?: string | IPublishPropertyArgs): PropertyDecorator {
-  return (tgt: any, key: string | symbol) => {
-    const target: IRendererPublic = tgt
-    const prevRegister = target.__register__ ?? (() => {})
-    target.__register__ = instance => {
-      prevRegister(instance)
-      publicStaticProperty(<string>arg)(instance, key)
-    }
-  }
-}
-
-/**
- * Binds all public entities of a class to a specific instance.
- *
- * _only for class instance_
- */
-export function providePublic<InstanceType>(instance: InstanceType): InstanceType {
-  const target = <IRendererPublic> instance
-  if (!target.__register__)
-    throw new Error('Public methods not defined')
-  
-  target.__register__(instance)
-  target.__register__ = undefined
-  return instance
-}
 
 /**
  * Makes the function available for **renderer** and **preload** processes.
@@ -215,16 +40,16 @@ export function publicFunction(name: string, func: PublicFunction, scopes = [Sco
       if (result instanceof Promise) {
         const promiseChannel = channel + IPCChannel.promisePostfix
         result
-          .then(value => e.sender.send(promiseChannel, <IIPCResult> { value }))
-          .catch(reason => e.sender.send(promiseChannel, <IIPCResult> { error: String(reason) }))
-        e.returnValue = <IIPCResult> { promiseChannel }
+          .then(value => e.sender.send(promiseChannel, { value } satisfies IIPCResult))
+          .catch(reason => e.sender.send(promiseChannel, { error: String(reason) } satisfies IIPCResult))
+        e.returnValue = { promiseChannel } satisfies IIPCResult
       }
       else {
-        e.returnValue = <IIPCResult> { value: result }
+        e.returnValue = { value: result } satisfies IIPCResult
       }
     }
     catch (error) {
-      e.returnValue = <IIPCResult> { error: String(error) }
+      e.returnValue = { error: String(error) } satisfies IIPCResult
     }
   })
 }
@@ -247,12 +72,17 @@ export function publicVariable(name: string, value: PublicProperty, scopes = [Sc
   properties.add(name)
   if (!publicInfo.scopes[name])
     publicInfo.scopes[name] = new Set(scopes)
-  
+
   if (!publicInfo.accesses[name]) {
     const accesses: Access[] = []
     getter && accesses.push(Access.get)
     setter && accesses.push(Access.set)
     publicInfo.accesses[name] = new Set(accesses)
+  }
+  else {
+    const accesses = publicInfo.accesses[name]
+    getter && accesses.add(Access.get)
+    setter && accesses.add(Access.set)
   }
 
   if (getter) {
@@ -282,10 +112,10 @@ export function publicVariable(name: string, value: PublicProperty, scopes = [Sc
   }
 }
 
-function scope(key: string, scope: Scope): void {
+export function addScope(key: string, scope: Scope): void {
   publicInfo.scopes[key] = new Set([scope])
 }
 
-function access(key: string, access: Access): void {
+export function addAccess(key: string, access: Access): void {
   publicInfo.accesses[key] = new Set([access])
 }

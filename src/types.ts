@@ -5,6 +5,30 @@ export interface ITarget {
   as<T>(): T
 }
 
+export type ClassMethodDecorator = <This, Args extends any[], Return> (
+  method: (this: This, ...args: Args) => Return,
+  context: ClassMethodDecoratorContext<This, (this: This, ...args: Args) => Return>
+) => void
+
+export type ClassPropertyDecorator = <This, Type> (
+  target: undefined,
+  context: ClassFieldDecoratorContext<This, Type>
+) => void
+
+export type ClassGetterDecorator = <This, Type> (
+  getter: () => Type,
+  context: ClassGetterDecoratorContext<This, Type>
+) => void
+
+export type ClassSetterDecorator = <This, Type> (
+  setter: (value: Type) => void,
+  context: ClassSetterDecoratorContext<This, Type>
+) => void
+
+export type PublishSetterArgs = Omit<IPublishPropertyArgs, 'access'>
+
+export type PublishGetterArgs = Omit<IPublishPropertyArgs, 'access'>
+
 export interface IIPCResult {
   value?: any
   error?: string

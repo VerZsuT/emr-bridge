@@ -38,18 +38,21 @@ provideFromMain(contextIsolation)
 
 ### Static methods and properties
 
-Use **publicStaticMethod**/**publicStaticProperty** decorators
+**Experimental decorators**
+
+Use **publicStaticMethodExp**/**publicStaticPropertyExp**.
 
 ```ts
 // Main process
-import { publicStaticMethod, publicStaticProperty, Access } from 'emr-bridge'
+
+import { publicStaticMethodExp, publicStaticPropertyExp, Access } from 'emr-bridge'
 
 class User {
   private static name = 'Name'
   private static age = 20
   private static money = 1000
   
-  @publicStaticProperty('userBalance')
+  @publicStaticPropertyExp('userBalance')
   static get balance(): string {
     return `${this.money}$`
   }
@@ -58,7 +61,7 @@ class User {
     this.money = Number(newBalance.split('$')[0])
   }
   
-  @publicStaticProperty({
+  @publicStaticPropertyExp({
     name: 'userInfo',
     access: Access.get
   })
@@ -66,12 +69,59 @@ class User {
     return `Name: '${this.name}'; Age: '${this.age}'; Money: '${this.money}';`
   }
   
-  @publicStaticMethod()
+  @publicStaticMethodExp()
   static setName(newName: string): void {
     this.name = newName
   }
   
-  @publicStaticMethod('getUserAge')
+  @publicStaticMethodExp('getUserAge')
+  static getAge(): number {
+    return this.age
+  }
+}
+```
+
+**New decorators**
+
+Use **publicMethod**/**publicProperty**/**publicGetter**/**publicSetter**.
+
+```ts
+// Main process
+
+import { publicMethod, publicProperty, publicGetter, publicSetter, Access } from 'emr-bridge'
+
+class User {
+  private static name = 'Name'
+  private static age = 20
+  private static money = 1000
+  
+  @publicGetter('userBalance')
+  static get balance(): string {
+    return `${this.money}$`
+  }
+  
+  @publicSetter('userBalance')
+  static set balance(newBalance: string) {
+    this.money = Number(newBalance.split('$')[0])
+  }
+  
+  @publicGetter({
+    name: 'userInfo',
+    access: Access.get
+  })
+  static get info(): string {
+    return `Name: '${this.name}'; Age: '${this.age}'; Money: '${this.money}';`
+  }
+
+  @publicProperty()
+  static id = 'ID_AJWD3KLW23DK231K'
+  
+  @publicMethod()
+  static setName(newName: string): void {
+    this.name = newName
+  }
+  
+  @publicMethod('getUserAge')
   static getAge(): number {
     return this.age
   }
@@ -80,20 +130,22 @@ class User {
 
 ### Methods and properties
 
-Use **providePublic** and **publicMethod**/**publicProperty** decorators.
+**Experimental decorators**
+
+Use **providePublic** and **publicMethodExp**/**publicPropertyExp**.
 
 Without calling **providePublic**, public methods will not be accessible from renderer.
 
 ```ts
 // Main process
-import { providePublic, publicMethod, publicProperty, Access } from 'emr-bridge'
+import { providePublic, publicMethodExp, publicPropertyExp, Access } from 'emr-bridge'
 
 class User {
   private name = 'Name'
   private age = 20
   private money = 1000
   
-  @publicProperty()
+  @publicPropertyExp()
   get balance(): string {
     return `${this.money}$`
   }
@@ -102,7 +154,55 @@ class User {
     this.money = Number(newBalance.split('$')[0])
   }
   
-  @publicProperty({
+  @publicPropertyExp({
+    name: 'userInfo',
+    access: Access.get
+  })
+  get info(): string {
+    return `Name: '${this.name}'; Age: '${this.age}'; Money: '${this.money}';`
+  }
+  
+  @publicMethodExp()
+  setName(newName: string): void {
+    this.name = newName
+  }
+  
+  @publicMethodExp('getUserAge')
+  getAge(): number {
+    return this.age
+  }
+}
+
+const user = providePublic(new User())
+```
+
+**New decorators**
+
+Use **publicMethod**/**publicProperty**/**publicGetter**/**publicSetter**.
+
+```ts
+// Main process
+import { publicMethod, publicProperty, publicGetter, publicSetter, Access } from 'emr-bridge'
+
+class User {
+  private name = 'Name'
+  private age = 20
+  private money = 1000
+
+  @publicProperty()
+  id = 'ID_AJWD3KLW23DK231K'
+  
+  @publicGetter()
+  get balance(): string {
+    return `${this.money}$`
+  }
+  
+  @publicSetter()
+  set balance(newBalance: string) {
+    this.money = Number(newBalance.split('$')[0])
+  }
+  
+  @publicGetter({
     name: 'userInfo',
     access: Access.get
   })
@@ -121,7 +221,7 @@ class User {
   }
 }
 
-const user = providePublic(new User())
+const user = new User()
 ```
 
 ### Functions and variables
@@ -169,13 +269,13 @@ Accessing an entity outside the specified scope will result in an error being th
 // Main process
 
 // static and non-static
-import { Scope, Access, providePublic, publicStaticMethod, publicMethod, publicProperty } from 'emr-bridge'
+import { Scope, Access, providePublic, publicStaticMethodExp, publicMethodExp, publicPropertyExp } from 'emr-bridge'
 
 class User {
   private static age = 20
   private name = 'Name'
   
-  @publicProperty({
+  @publicPropertyExp({
     scope: Scope.preload,
     access: Access.get
   })
@@ -183,12 +283,12 @@ class User {
     return 30
   }
   
-  @publicStaticMethod({ scope: Scope.preload })
+  @publicStaticMethodExp({ scope: Scope.preload })
   static getAge(): number {
     return this.age
   }
   
-  @publicMethod({
+  @publicMethodExp({
     name: 'getUserName',
     scope: Scope.renderer
   })
@@ -228,18 +328,18 @@ Using an entity outside the specified scope _will cause an error_.
 // Main process
 
 // static and non-static
-import { publicStaticProperty, publicProperty, providePublic, Access } from 'emr-bridge'
+import { publicStaticPropertyExp, publicPropertyExp, providePublic, Access } from 'emr-bridge'
 
 class User {
   private static name = 'Name'
   private static surname = 'Surname'
   
-  @publicStaticProperty({ access: Access.get })
+  @publicStaticPropertyExp({ access: Access.get })
   static get fullName(): string {
     return `${this.name} ${this.surname}`
   }
   
-  @publicProperty({
+  @publicPropertyExp({
     name: 'userAge',
     access: Access.get
   })
