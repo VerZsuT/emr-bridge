@@ -40,6 +40,11 @@ export interface IPublishMethodArgs {
   scope?: Scope
 }
 
+export interface IPublishEventArgs {
+  name?: string
+  scope?: Scope
+}
+
 export interface IPublishPropertyArgs {
   name?: string
   scope?: Scope
@@ -49,6 +54,7 @@ export interface IPublishPropertyArgs {
 export interface ICreateProviderArgs {
   info: IInfo
   scope: Scope
+  handleEvent(name: string, type: 'on' | 'once', handler: EventHandler<IIPCResult>): EventUnsubscriber
   callFunction(name: string, ...args: any[]): IIPCResult
   getVariable(name: string): IIPCResult
   setVariable(name: string, value: any): IIPCResult | undefined
@@ -57,6 +63,11 @@ export interface ICreateProviderArgs {
 
 export type Scopes = Record<string, Set<Scope>>
 export type Accesses = Record<string, Set<Access>>
+
+export type MainEvent<T = undefined> = (handler: EventHandler<T>) => EventUnsubscriber
+export type EventEmitter = (...args: any[]) => any
+export type EventUnsubscriber = () => void
+export type EventHandler<T> = (result: T) => void
 
 export interface IRendererPublic {
   __register__?(instance: any): void
@@ -67,6 +78,7 @@ export interface IProvider {
   waitPromise(name: string, resolve: (value: any) => void, reject?: (reason?: any) => void): void
   provided: {
     functions: Record<string, (...args: any[]) => IIPCResult>,
+    events: Record<string, (type: 'on' | 'once', handler: EventHandler<IIPCResult>) => EventUnsubscriber>
     properties: Record<string, IIPCResult>
   }
 }
@@ -81,6 +93,7 @@ export type PublicProperty = {
 export interface IInfo {
   properties: Set<string>
   functions: Set<string>
+  events: Set<string>
   scopes: Scopes
   accesses: Accesses
 }

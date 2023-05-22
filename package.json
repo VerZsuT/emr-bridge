@@ -1,37 +1,70 @@
 {
   "name": "emr-bridge",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Allows you to easily give access to main methods from the renderer process",
-  "main": "lib/index.js",
+  "main": "esm/index.js",
   "scripts": {
-    "compile": "tsc --project ./tsconfig.json"
+    "compile": "tsc --project ./tsconfig.json && tsc --project ./tsconfig.cjs.json"
   },
-  "types": "lib/index.d.ts",
+  "types": "esm/index.d.ts",
   "files": [
-    "lib"
+    "esm",
+    "cjs"
   ],
   "typesVersions": {
     "*": {
       ".": [
-        "./lib/index.d.ts"
+        "./esm/index.d.ts"
       ],
       "renderer": [
-        "./lib/renderer.d.ts"
+        "./esm/renderer.d.ts"
       ],
       "preload": [
-        "./lib/preload.d.ts"
+        "./esm/preload.d.ts"
+      ],
+      "exp": [
+        "./esm/exp.d.ts"
       ],
       "main": [
-        "./lib/index.d.ts"
+        "./esm/index.d.ts"
+      ],
+      "main/exp": [
+        "./esm/exp.d.ts"
+      ],
+      "cjs": [
+        "./cjs/index.d.ts"
+      ],
+      "cjs/renderer": [
+        "./cjs/renderer.d.ts"
+      ],
+      "cjs/preload": [
+        "./cjs/preload.d.ts"
+      ],
+      "cjs/exp": [
+        "./cjs/exp.d.ts"
+      ],
+      "cjs/main": [
+        "./cjs/index.d.ts"
+      ],
+      "cjs/main/exp": [
+        "./cjs/exp.d.ts"
       ]
     }
   },
   "exports": {
-    ".": "./lib/index.js",
-    "./renderer": "./lib/renderer.js",
-    "./preload": "./lib/preload.js",
-    "./main": "./lib/index.js",
-    "./package.json": "./package.json"
+    ".": "./esm/index.js",
+    "./renderer": "./esm/renderer.js",
+    "./preload": "./esm/preload.js",
+    "./exp": "./esm/exp.js",
+    "./main": "./esm/index.js",
+    "./main/exp": "./esm/exp.js",
+    "./package.json": "./package.json",
+    "./cjs": "./cjs/index.js",
+    "./cjs/exp": "./cjs/exp.js",
+    "./cjs/renderer": "./cjs/renderer.js",
+    "./cjs/preload": "./cjs/preload.js",
+    "./cjs/main": "./cjs/index.js",
+    "./cjs/main/exp": "./cjs/exp.js"
   },
   "repository": {
     "type": "git",
@@ -47,6 +80,6 @@
     "electron": ">=20.0.0"
   },
   "devDependencies": {
-    "typescript": "^5.0.2"
+    "typescript": "^5.0.4"
   }
 }

@@ -23,6 +23,8 @@ npm i emr-bridge
 
 ## Usage
 
+_If you need CommonJS modules, then use `emr-bridge/cjs`_
+
 There are three ways to use
 
 **IMPORTANT**: In any of the cases, you need to insert this code into preload
@@ -31,28 +33,26 @@ There are three ways to use
 // Preload process
 import { provideFromMain } from 'emr-bridge/preload'
 
-const contextIsolation = true
-
-provideFromMain(contextIsolation)
+provideFromMain(true /* context isolation */)
 ```
 
 ### Static methods and properties
 
 **Experimental decorators**
 
-Use **publicStaticMethodExp**/**publicStaticPropertyExp**.
+Use **publicStaticMethod**/**publicStaticProperty**.
 
 ```ts
 // Main process
 
-import { publicStaticMethodExp, publicStaticPropertyExp, Access } from 'emr-bridge'
+import { publicStaticMethod, publicStaticProperty, Access } from 'emr-bridge/exp'
 
 class User {
   private static name = 'Name'
   private static age = 20
   private static money = 1000
   
-  @publicStaticPropertyExp('userBalance')
+  @publicStaticProperty('userBalance')
   static get balance(): string {
     return `${this.money}$`
   }
@@ -61,7 +61,7 @@ class User {
     this.money = Number(newBalance.split('$')[0])
   }
   
-  @publicStaticPropertyExp({
+  @publicStaticProperty({
     name: 'userInfo',
     access: Access.get
   })
@@ -69,12 +69,12 @@ class User {
     return `Name: '${this.name}'; Age: '${this.age}'; Money: '${this.money}';`
   }
   
-  @publicStaticMethodExp()
+  @publicStaticMethod()
   static setName(newName: string): void {
     this.name = newName
   }
   
-  @publicStaticMethodExp('getUserAge')
+  @publicStaticMethod('getUserAge')
   static getAge(): number {
     return this.age
   }
@@ -132,20 +132,20 @@ class User {
 
 **Experimental decorators**
 
-Use **providePublic** and **publicMethodExp**/**publicPropertyExp**.
+Use **providePublic** and **publicMethod**/**publicProperty**.
 
 Without calling **providePublic**, public methods will not be accessible from renderer.
 
 ```ts
 // Main process
-import { providePublic, publicMethodExp, publicPropertyExp, Access } from 'emr-bridge'
+import { providePublic, publicMethod, publicProperty, Access } from 'emr-bridge/exp'
 
 class User {
   private name = 'Name'
   private age = 20
   private money = 1000
   
-  @publicPropertyExp()
+  @publicProperty()
   get balance(): string {
     return `${this.money}$`
   }
@@ -154,7 +154,7 @@ class User {
     this.money = Number(newBalance.split('$')[0])
   }
   
-  @publicPropertyExp({
+  @publicProperty({
     name: 'userInfo',
     access: Access.get
   })
@@ -162,12 +162,12 @@ class User {
     return `Name: '${this.name}'; Age: '${this.age}'; Money: '${this.money}';`
   }
   
-  @publicMethodExp()
+  @publicMethod()
   setName(newName: string): void {
     this.name = newName
   }
   
-  @publicMethodExp('getUserAge')
+  @publicMethod('getUserAge')
   getAge(): number {
     return this.age
   }
@@ -269,13 +269,13 @@ Accessing an entity outside the specified scope will result in an error being th
 // Main process
 
 // static and non-static
-import { Scope, Access, providePublic, publicStaticMethodExp, publicMethodExp, publicPropertyExp } from 'emr-bridge'
+import { Scope, Access, providePublic, publicStaticMethod, publicMethod, publicProperty } from 'emr-bridge/exp'
 
 class User {
   private static age = 20
   private name = 'Name'
   
-  @publicPropertyExp({
+  @publicProperty({
     scope: Scope.preload,
     access: Access.get
   })
@@ -283,12 +283,12 @@ class User {
     return 30
   }
   
-  @publicStaticMethodExp({ scope: Scope.preload })
+  @publicStaticMethod({ scope: Scope.preload })
   static getAge(): number {
     return this.age
   }
   
-  @publicMethodExp({
+  @publicMethod({
     name: 'getUserName',
     scope: Scope.renderer
   })
@@ -328,18 +328,18 @@ Using an entity outside the specified scope _will cause an error_.
 // Main process
 
 // static and non-static
-import { publicStaticPropertyExp, publicPropertyExp, providePublic, Access } from 'emr-bridge'
+import { publicStaticProperty, publicProperty, providePublic, Access } from 'emr-bridge/exp'
 
 class User {
   private static name = 'Name'
   private static surname = 'Surname'
   
-  @publicStaticPropertyExp({ access: Access.get })
+  @publicStaticProperty({ access: Access.get })
   static get fullName(): string {
     return `${this.name} ${this.surname}`
   }
   
-  @publicPropertyExp({
+  @publicProperty({
     name: 'userAge',
     access: Access.get
   })

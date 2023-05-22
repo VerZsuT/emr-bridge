@@ -1,9 +1,10 @@
 import type {
+  IPublishEventArgs,
   IPublishMethodArgs,
   IPublishPropertyArgs,
   IRendererPublic
 } from '../types'
-import { addAccess, addScope, publicFunction, publicVariable } from './publish'
+import { addAccess, addScope, publicEvent, publicFunction, publicVariable } from './publish'
 
 /**
  * Makes the method available for **renderer** and **preload** processes.
@@ -88,6 +89,93 @@ export function publicMethod(arg?: string | IPublishMethodArgs): MethodDecorator
     target.__register__ = instance => {
       prevRegister(instance)
       publicStaticMethod(<string>arg)(instance, key, _)
+    }
+  }
+}
+
+/**
+ * Makes the event available for **renderer** and **preload** processes.
+ *
+ * _only for static_
+ * 
+ * _experimental decorators_
+ */
+export function publicStaticEvent(): MethodDecorator
+/**
+ * Makes the event available for **renderer** and **preload** processes.
+ *
+ * _only for static_
+ * 
+ * _experimental decorators_
+ * @param name - name by which the event will be accessed
+ */
+export function publicStaticEvent(name: string): MethodDecorator
+/**
+ * Makes the event available for **renderer** and **preload** processes.
+ *
+ * _only for static_
+ * 
+ * _experimental decorators_
+ * @param args - publish args
+ */
+export function publicStaticEvent(args: IPublishEventArgs): MethodDecorator
+export function publicStaticEvent(arg?: string | IPublishEventArgs): MethodDecorator {
+  return (target: any, key: string | symbol) => {
+    let name = String(key)
+
+    if (arg) {
+      if (typeof arg === 'string') {
+        name = arg
+      }
+      else {
+        name = arg.name ?? String(key)
+        if (arg.scope) addScope(name, arg.scope)
+      }
+    }
+
+    target[key] = publicEvent(name, target[key].bind(target))
+  }
+}
+
+/**
+ * Makes the event available for **renderer** and **preload** processes.
+ *
+ * _only for non-static_
+ * 
+ * _experimental decorators_
+ *
+ * _required `providePublic(classInstance)`_
+ */
+export function publicClassEvent(): MethodDecorator
+/**
+ * Makes the event available for **renderer** and **preload** processes.
+ *
+ * _only for non-static_
+ * 
+ * _experimental decorators_
+ *
+ * _required `providePublic(classInstance)`_
+ * @param name - name by which the event will be accessed
+ */
+export function publicClassEvent(name: string): MethodDecorator
+/**
+ * Makes the event available for **renderer** and **preload** processes.
+ *
+ * _only for non-static_
+ * 
+ * _experimental decorators_
+ *
+ * _required `providePublic(classInstance)`_
+ * @param args - publish args
+ */
+export function publicClassEvent(args: IPublishEventArgs): MethodDecorator
+export function publicClassEvent(arg?: string | IPublishEventArgs): MethodDecorator {
+  return (tgt: any, key: string | symbol, _) => {
+    const target: IRendererPublic = tgt
+    const prevRegister = target.__register__ ?? (() => { })
+    target.__register__ = instance => {
+      prevRegister(instance)
+      publicStaticEvent(<string>arg)(instance, key, _)
     }
   }
 }

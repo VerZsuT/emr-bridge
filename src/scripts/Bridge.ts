@@ -19,6 +19,9 @@ const Bridge = createProvider({
   callFunction(name: string, ...args): IIPCResult {
     return provider.provided.functions[name](...args)
   },
+  handleEvent(name, type, handler) {
+    return provider.provided.events[name](type, handler)
+  },
   getVariable(name: string): IIPCResult {
     return provider.provided.properties[name]
   },

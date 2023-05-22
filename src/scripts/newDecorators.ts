@@ -3,12 +3,13 @@ import type {
   ClassMethodDecorator,
   ClassPropertyDecorator,
   ClassSetterDecorator,
+  IPublishEventArgs,
   IPublishMethodArgs,
   IPublishPropertyArgs,
   PublishGetterArgs,
   PublishSetterArgs
 } from '../types'
-import { addAccess, addScope, publicFunction, publicVariable } from './publish'
+import { addAccess, addScope, publicEvent, publicFunction, publicVariable } from './publish'
 
 /**
  * Makes the method available for **renderer** and **preload** processes.
@@ -49,6 +50,50 @@ export function publicMethod(arg?: string | IPublishMethodArgs): ClassMethodDeco
 
     context.addInitializer(function (this: This) {
       publicFunction(name, method.bind(this))
+    })
+  }
+}
+
+/**
+ * Makes the event available for **renderer** and **preload** processes.
+ * 
+ * _only new decorators_
+ */
+export function publicClassEvent(): ClassMethodDecorator
+/**
+ * Makes the event available for **renderer** and **preload** processes.
+ * 
+ * _only new decorators_
+ * @param name - name by which the event will be accessed
+*/
+export function publicClassEvent(name: string): ClassMethodDecorator
+/**
+ * Makes the event available for **renderer** and **preload** processes.
+ * 
+ * _only new decorators_
+ * @param args - publish args
+ */
+export function publicClassEvent(args: IPublishEventArgs): ClassMethodDecorator
+export function publicClassEvent(arg?: string | IPublishEventArgs): ClassMethodDecorator {
+  return <This, Args extends any[], Return>(
+    method: (this: This, ...args: Args) => Return,
+    context: ClassMethodDecoratorContext<This, (this: This, ...args: Args) => Return>
+  ) => {
+    let name = String(context.name)
+
+    if (arg) {
+      if (typeof arg === 'string') {
+        name = arg
+      }
+      else {
+        name = arg.name ?? name
+        if (arg.scope) addScope(name, arg.scope)
+      }
+    }
+
+    context.addInitializer(function (this: This) {
+      // @ts-ignore
+      this[name] = publicEvent(name, method.bind(this))
     })
   }
 }

@@ -24,7 +24,8 @@ function provideFromMain(contextIsolation = true): void {
     },
     provided: {
       properties: {},
-      functions: {}
+      functions: {},
+      events: {}
     }
   }
 
@@ -32,6 +33,26 @@ function provideFromMain(contextIsolation = true): void {
     Object.defineProperty(provider.provided.functions, funcName, {
       value(...args: any[]): IIPCResult {
         return ipcRenderer.sendSync(IPCChannel.functionCall + funcName, ...args)
+      },
+      enumerable: true
+    })
+  })
+  info.events.forEach(eventName => {
+    Object.defineProperty(provider.provided.events, eventName, {
+      value(type: 'on' | 'once', handler: (result: IIPCResult) => any) {
+        const listener = (_: any, result: IIPCResult) => handler(result)
+        const emitChannel = IPCChannel.eventEmit + eventName
+
+        if (type === 'on') {
+          ipcRenderer.send(IPCChannel.eventHandleOn + eventName)
+          ipcRenderer.on(emitChannel, listener)
+        }
+        else {
+          ipcRenderer.send(IPCChannel.eventHandleOnce + eventName)
+          ipcRenderer.once(emitChannel, listener)
+        }
+
+        return () => ipcRenderer.removeListener(emitChannel, listener)
       },
       enumerable: true
     })

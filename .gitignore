@@ -1,4 +1,6 @@
-lib
+esm
+cjs
+
 node_modules
 .idea
 emr-bridge*.tgz

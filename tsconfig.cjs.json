@@ -1,10 +1,10 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
+    "module": "CommonJS",
+    "moduleResolution": "node",
     "newLine": "LF",
-    "outDir": "./esm",
+    "outDir": "./cjs",
     "lib": [
       "ESNext",
       "DOM"

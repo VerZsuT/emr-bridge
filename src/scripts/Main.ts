@@ -19,6 +19,21 @@ const Main = createProvider({
   callFunction(name: string, ...args): IIPCResult {
     return ipcRenderer.sendSync(IPCChannel.functionCall + name, ...args)
   },
+  handleEvent(name, type, handler) {
+    const listener = (_: any, result: IIPCResult) => handler(result)
+    const emitChannel = IPCChannel.eventEmit + name
+
+    if (type === 'on') {
+      ipcRenderer.send(IPCChannel.eventHandleOn + name)
+      ipcRenderer.on(emitChannel, listener)
+    }
+    else {
+      ipcRenderer.send(IPCChannel.eventHandleOnce + name)
+      ipcRenderer.once(emitChannel, listener)
+    }
+
+    return () => ipcRenderer.removeListener(emitChannel, listener)
+  },
   getVariable(name: string): IIPCResult {
     return ipcRenderer.sendSync(IPCChannel.propertyGet + name)
   },

@@ -1,12 +1,12 @@
 import { Access, Scope } from '../enums'
-import type { ICreateProviderArgs, ITarget } from '../types'
+import type { ICreateProviderArgs, IIPCResult, ITarget } from '../types'
 
 function errorHandler(error: string, channel: string): void {
   console.error(`Error on ${channel}.\n${error}`.replace('Error: ', ''))
 }
 
 function createProvider(args: ICreateProviderArgs): ITarget {
-  const { info, scope, getVariable, setVariable, callFunction, waitPromise } = args
+  const { info, scope, getVariable, setVariable, callFunction, handleEvent, waitPromise } = args
 
   const target: ITarget = {
     as: <T>(): T => proxy
@@ -32,6 +32,56 @@ function createProvider(args: ICreateProviderArgs): ITarget {
       },
       set() {
         throw new Error(`Function '${funcName}' is readonly`)
+      },
+      enumerable: true
+    })
+  })
+
+  info.events.forEach(eventName => {
+    if (!info.scopes[eventName].has(scope)) return
+
+    const eventNameOn = `on${eventName[0].toUpperCase()}${eventName.slice(1)}`
+    const eventNameOnce = `once${eventName[0].toUpperCase()}${eventName.slice(1)}`
+
+    Object.defineProperty(target, eventNameOn, {
+      get() {
+        return (handler: (...args: any[]) => any) => {
+          return handleEvent(eventName, 'on', (result: IIPCResult) => {
+            if (result.error) {
+              errorHandler(result.error, eventName)
+              return
+            }
+
+            if (result.promiseChannel)
+              waitPromise(result.promiseChannel).then(handler)
+
+            handler(result.value)
+          })
+        }
+      },
+      set() {
+        throw new Error(`Function '${eventNameOn}' is readonly`)
+      },
+      enumerable: true
+    })
+    Object.defineProperty(target, eventNameOnce, {
+      get() {
+        return (handler: (...args: any[]) => any) => {
+          return handleEvent(eventName, 'once', (result: IIPCResult) => {
+            if (result.error) {
+              errorHandler(result.error, eventName)
+              return
+            }
+
+            if (result.promiseChannel)
+              waitPromise(result.promiseChannel).then(handler)
+
+            handler(result.value)
+          })
+        }
+      },
+      set() {
+        throw new Error(`Function '${eventNameOnce}' is readonly`)
       },
       enumerable: true
     })
