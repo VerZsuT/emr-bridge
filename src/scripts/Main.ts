@@ -19,20 +19,34 @@ const Main = createProvider({
   callFunction(name: string, ...args): IIPCResult {
     return ipcRenderer.sendSync(IPCChannel.functionCall + name, ...args)
   },
-  handleEvent(name, type, handler) {
+  handleMainEvent(name, type, handler) {
     const listener = (_: any, result: IIPCResult) => handler(result)
-    const emitChannel = IPCChannel.eventEmit + name
+    const emitChannel = IPCChannel.mainEventEmit + name
 
     if (type === 'on') {
-      ipcRenderer.send(IPCChannel.eventHandleOn + name)
+      ipcRenderer.send(IPCChannel.mainEventOn + name)
       ipcRenderer.on(emitChannel, listener)
     }
     else {
-      ipcRenderer.send(IPCChannel.eventHandleOnce + name)
+      ipcRenderer.send(IPCChannel.mainEventOnce + name)
       ipcRenderer.once(emitChannel, listener)
     }
 
     return () => ipcRenderer.removeListener(emitChannel, listener)
+  },
+  emitRendererEvent(name, arg) {
+    const emitChannel = IPCChannel.rendererEventEmit + name
+
+    if (arg instanceof Promise) {
+      const promiseChannel = emitChannel + IPCChannel.promisePostfix
+      ipcRenderer.sendSync(emitChannel, { promiseChannel } satisfies IIPCResult)
+      arg
+        .then(value => ipcRenderer.send(promiseChannel, { value } satisfies IIPCResult))
+        .catch(reason => ipcRenderer.send(promiseChannel, { error: String(reason) } satisfies IIPCResult))
+    }
+    else {
+      ipcRenderer.send(emitChannel, { value: arg } satisfies IIPCResult)
+    }
   },
   getVariable(name: string): IIPCResult {
     return ipcRenderer.sendSync(IPCChannel.propertyGet + name)

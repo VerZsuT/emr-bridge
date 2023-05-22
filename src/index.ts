@@ -1,5 +1,5 @@
 export { Access, Scope } from './enums'
-export { publicClassEvent, publicGetter, publicMethod, publicProperty, publicSetter } from './scripts/newDecorators'
-export { publicEvent, publicFunction, publicVariable } from './scripts/publish'
-export type { EventEmitter, EventHandler, EventUnsubscriber, IPublishEventArgs, IPublishMethodArgs, IPublishPropertyArgs, MainEvent, PublicFunction, PublicProperty } from './types'
+export { publicClassMainEvent, publicClassRendererEvent, publicGetter, publicMethod, publicProperty, publicSetter } from './scripts/newDecorators'
+export { publicFunction, publicMainEvent, publicRendererEvent, publicVariable } from './scripts/publish'
+export type { EventEmitter, EventHandler, EventReceiver, EventUnsubscriber, IPublishMainEventArgs, IPublishMethodArgs, IPublishPropertyArgs, IPublishRendererEventArgs, MainEvent, PublicFunction, PublicProperty, RendererEvent } from './types'
 

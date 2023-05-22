@@ -3,13 +3,15 @@ import type {
   ClassMethodDecorator,
   ClassPropertyDecorator,
   ClassSetterDecorator,
-  IPublishEventArgs,
+  EventReceiver,
+  IPublishMainEventArgs,
   IPublishMethodArgs,
   IPublishPropertyArgs,
+  IPublishRendererEventArgs,
   PublishGetterArgs,
   PublishSetterArgs
 } from '../types'
-import { addAccess, addScope, publicEvent, publicFunction, publicVariable } from './publish'
+import { addAccess, addScope, publicFunction, publicMainEvent, publicRendererEvent, publicVariable } from './publish'
 
 /**
  * Makes the method available for **renderer** and **preload** processes.
@@ -59,22 +61,22 @@ export function publicMethod(arg?: string | IPublishMethodArgs): ClassMethodDeco
  * 
  * _only new decorators_
  */
-export function publicClassEvent(): ClassMethodDecorator
+export function publicClassMainEvent(): ClassMethodDecorator
 /**
  * Makes the event available for **renderer** and **preload** processes.
  * 
  * _only new decorators_
  * @param name - name by which the event will be accessed
 */
-export function publicClassEvent(name: string): ClassMethodDecorator
+export function publicClassMainEvent(name: string): ClassMethodDecorator
 /**
  * Makes the event available for **renderer** and **preload** processes.
  * 
  * _only new decorators_
  * @param args - publish args
  */
-export function publicClassEvent(args: IPublishEventArgs): ClassMethodDecorator
-export function publicClassEvent(arg?: string | IPublishEventArgs): ClassMethodDecorator {
+export function publicClassMainEvent(args: IPublishMainEventArgs): ClassMethodDecorator
+export function publicClassMainEvent(arg?: string | IPublishMainEventArgs): ClassMethodDecorator {
   return <This, Args extends any[], Return>(
     method: (this: This, ...args: Args) => Return,
     context: ClassMethodDecoratorContext<This, (this: This, ...args: Args) => Return>
@@ -93,7 +95,78 @@ export function publicClassEvent(arg?: string | IPublishEventArgs): ClassMethodD
 
     context.addInitializer(function (this: This) {
       // @ts-ignore
-      this[name] = publicEvent(name, method.bind(this))
+      this[context.name] = publicMainEvent(name, method.bind(this))
+    })
+  }
+}
+
+/**
+ * Makes the event from **renderer** and **preload** available for **main** process.
+ *
+ * _only new decorators_
+ */
+export function publicClassRendererEvent(): ClassPropertyDecorator
+/**
+ * Makes the event from **renderer** and **preload** available for **main** process.
+ *
+ * _only new decorators_
+ * @param name - name by which the event will be accessed
+ */
+export function publicClassRendererEvent(name: string): ClassPropertyDecorator
+/**
+ * Makes the event from **renderer** and **preload** available for **main** process.
+ *
+ * _only new decorators_
+ * @param receiver - linked receiver
+ */
+export function publicClassRendererEvent(receiver: EventReceiver): ClassPropertyDecorator
+/**
+ * Makes the event from **renderer** and **preload** available for **main** process.
+ *
+ * 
+ * @param name - name by which the event will be accessed
+ * @param receiver - linked receiver
+ */
+export function publicClassRendererEvent(name: string, receiver: EventReceiver): ClassPropertyDecorator
+/**
+ * Makes the event from **renderer** and **preload** available for **main** process.
+ *
+ * _only new decorators_
+ * @param args - publish args
+ */
+export function publicClassRendererEvent(args: IPublishRendererEventArgs): ClassPropertyDecorator
+/**
+ * Makes the event from **renderer** and **preload** available for **main** process.
+ * 
+ * _only new decorators_
+ * @param args - publish args
+ */
+export function publicClassRendererEvent(args: IPublishRendererEventArgs): ClassPropertyDecorator
+export function publicClassRendererEvent(arg?: string | EventReceiver | IPublishRendererEventArgs): ClassPropertyDecorator {
+  return <This, Type>(
+    _: undefined,
+    context: ClassFieldDecoratorContext<This, Type>
+  ) => {
+    let name = String(context.name)
+    let receiver = (v: any) => v
+
+    if (arg) {
+      if (typeof arg === 'string') {
+        name = arg
+      }
+      else if (typeof arg === 'object') {
+        name = arg.name ?? String(context.name)
+        receiver = arg.receiver ?? receiver
+        if (arg.scope) addScope(name, arg.scope)
+      }
+      else {
+        receiver = arg
+      }
+    }
+
+    context.addInitializer(function (this: This) {
+      // @ts-ignore
+      this[context.name] = publicRendererEvent(name, receiver)
     })
   }
 }
@@ -123,8 +196,8 @@ export function publicProperty(arg?: string | IPublishPropertyArgs): ClassProper
     _: undefined,
     context: ClassFieldDecoratorContext<This, Type>
   ) => {
-    const propName = String(context.name)
-    let name = propName
+    const key = String(context.name)
+    let name = key
 
     if (arg) {
       if (typeof arg === 'string') {
@@ -141,11 +214,11 @@ export function publicProperty(arg?: string | IPublishPropertyArgs): ClassProper
       publicVariable(name, {
         get: () => {
           // @ts-ignore
-          return this[propName]
+          return this[key]
         },
         set: (value: any) => {
           // @ts-ignore
-          this[propName] = value
+          this[key] = value
         }
       })
     })

@@ -8,13 +8,15 @@ export enum Scope {
   preload = 'preload'
 }
 
+
 export enum IPCChannel {
   getPublicInfo = 'GET_PUBLIC_INFO',
   functionCall = 'FUNCTION_CALL_',
-  eventHandleOn = 'EVENT_HANDLE_ON_',
-  eventHandleOnce = 'EVENT_HANDLE_ONCE_',
-  eventEmit = 'EVENT_EMIT_',
+  mainEventOn = 'MAIN_EVENT_ON_',
+  mainEventOnce = 'MAIN_EVENT_ONCE_',
+  mainEventEmit = 'MAIN_EVENT_EMIT_',
   propertyGet = 'PROPERTY_GET_',
   propertySet = 'PROPERTY_SET_',
-  promisePostfix = '_PROMISE'
+  promisePostfix = '_PROMISE',
+  rendererEventEmit = "RENDERER_EMIT_"
 }

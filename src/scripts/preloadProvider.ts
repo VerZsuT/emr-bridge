@@ -25,7 +25,8 @@ function provideFromMain(contextIsolation = true): void {
     provided: {
       properties: {},
       functions: {},
-      events: {}
+      mainEvents: {},
+      rendererEvents: {}
     }
   }
 
@@ -37,19 +38,36 @@ function provideFromMain(contextIsolation = true): void {
       enumerable: true
     })
   })
-  info.events.forEach(eventName => {
-    Object.defineProperty(provider.provided.events, eventName, {
-      value(type: 'on' | 'once', handler: (result: IIPCResult) => any) {
-        const listener = (_: any, result: IIPCResult) => handler(result)
-        const emitChannel = IPCChannel.eventEmit + eventName
+  info.rendererEvents.forEach(rendererEventName => {
+    Object.defineProperty(provider.provided.rendererEvents, rendererEventName, {
+      value(arg: any) {
+        const emitChannel = IPCChannel.rendererEventEmit + rendererEventName
 
-        if (type === 'on') {
-          ipcRenderer.send(IPCChannel.eventHandleOn + eventName)
-          ipcRenderer.on(emitChannel, listener)
+        if (arg instanceof Promise) {
+          arg
+            .then(value => ipcRenderer.send(emitChannel, { value } satisfies IIPCResult))
+            .catch(reason => ipcRenderer.send(emitChannel, { error: String(reason) } satisfies IIPCResult))
         }
         else {
-          ipcRenderer.send(IPCChannel.eventHandleOnce + eventName)
+          ipcRenderer.send(emitChannel, { value: arg } satisfies IIPCResult)
+        }
+      },
+      enumerable: true
+    })
+  })
+  info.mainEvents.forEach(mainEventName => {
+    Object.defineProperty(provider.provided.mainEvents, mainEventName, {
+      value(type: 'on' | 'once', handler: (result: IIPCResult) => any) {
+        const listener = (_: any, result: IIPCResult) => handler(result)
+        const emitChannel = IPCChannel.mainEventEmit + mainEventName
+
+        if (type === 'on') {
+          ipcRenderer.on(emitChannel, listener)
+          ipcRenderer.send(IPCChannel.mainEventOn + mainEventName)
+        }
+        else {
           ipcRenderer.once(emitChannel, listener)
+          ipcRenderer.send(IPCChannel.mainEventOnce + mainEventName)
         }
 
         return () => ipcRenderer.removeListener(emitChannel, listener)

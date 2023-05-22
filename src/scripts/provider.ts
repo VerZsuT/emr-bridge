@@ -6,7 +6,7 @@ function errorHandler(error: string, channel: string): void {
 }
 
 function createProvider(args: ICreateProviderArgs): ITarget {
-  const { info, scope, getVariable, setVariable, callFunction, handleEvent, waitPromise } = args
+  const { info, scope, getVariable, setVariable, callFunction, handleMainEvent, waitPromise, emitRendererEvent } = args
 
   const target: ITarget = {
     as: <T>(): T => proxy
@@ -37,18 +37,32 @@ function createProvider(args: ICreateProviderArgs): ITarget {
     })
   })
 
-  info.events.forEach(eventName => {
-    if (!info.scopes[eventName].has(scope)) return
+  info.rendererEvents.forEach(rendererEventName => {
+    if (!info.scopes[rendererEventName].has(scope)) return
 
-    const eventNameOn = `on${eventName[0].toUpperCase()}${eventName.slice(1)}`
-    const eventNameOnce = `once${eventName[0].toUpperCase()}${eventName.slice(1)}`
+    Object.defineProperty(target, rendererEventName, {
+      get() {
+        return (arg: any) => emitRendererEvent(rendererEventName, arg)
+      },
+      set() {
+        throw new Error(`Function '${rendererEventName}' is readonly`)
+      },
+      enumerable: true
+    })
+  })
+
+  info.mainEvents.forEach(mainEventName => {
+    if (!info.scopes[mainEventName].has(scope)) return
+
+    const eventNameOn = `on${mainEventName[0].toUpperCase()}${mainEventName.slice(1)}`
+    const eventNameOnce = `once${mainEventName[0].toUpperCase()}${mainEventName.slice(1)}`
 
     Object.defineProperty(target, eventNameOn, {
       get() {
         return (handler: (...args: any[]) => any) => {
-          return handleEvent(eventName, 'on', (result: IIPCResult) => {
+          return handleMainEvent(mainEventName, 'on', (result: IIPCResult) => {
             if (result.error) {
-              errorHandler(result.error, eventName)
+              errorHandler(result.error, mainEventName)
               return
             }
 
@@ -67,9 +81,9 @@ function createProvider(args: ICreateProviderArgs): ITarget {
     Object.defineProperty(target, eventNameOnce, {
       get() {
         return (handler: (...args: any[]) => any) => {
-          return handleEvent(eventName, 'once', (result: IIPCResult) => {
+          return handleMainEvent(mainEventName, 'once', (result: IIPCResult) => {
             if (result.error) {
-              errorHandler(result.error, eventName)
+              errorHandler(result.error, mainEventName)
               return
             }
 

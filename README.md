@@ -14,6 +14,7 @@ JS library for easily providing access to the **main** from the **renderer** pro
   - [access](#restricting-access-to-variables)
   - [usage in renderer](#access-from-renderer-and-preload)
   - [promises](#promises)
+  - [events](#events-system)
 
 ## Installation
 
@@ -36,59 +37,26 @@ import { provideFromMain } from 'emr-bridge/preload'
 provideFromMain(true /* context isolation */)
 ```
 
-### Static methods and properties
+**IMPORTANT**: To use experimental non-static decorators, it is required to wrap the creation of a class instance in the `providePublic` function
 
-**Experimental decorators**
-
-Use **publicStaticMethod**/**publicStaticProperty**.
-
-```ts
+```js
 // Main process
+import { providePublic } from 'emr-bridge/main/exp'
 
-import { publicStaticMethod, publicStaticProperty, Access } from 'emr-bridge/exp'
+class MainPublic { /*...*/ }
 
-class User {
-  private static name = 'Name'
-  private static age = 20
-  private static money = 1000
-  
-  @publicStaticProperty('userBalance')
-  static get balance(): string {
-    return `${this.money}$`
-  }
-  
-  static set balance(newBalance: string) {
-    this.money = Number(newBalance.split('$')[0])
-  }
-  
-  @publicStaticProperty({
-    name: 'userInfo',
-    access: Access.get
-  })
-  static get info(): string {
-    return `Name: '${this.name}'; Age: '${this.age}'; Money: '${this.money}';`
-  }
-  
-  @publicStaticMethod()
-  static setName(newName: string): void {
-    this.name = newName
-  }
-  
-  @publicStaticMethod('getUserAge')
-  static getAge(): number {
-    return this.age
-  }
-}
+const instance = providePublic(new MainPublic())
 ```
 
-**New decorators**
+**NOTE**: All experimental decorators can be found in `emr-bridge/exp`
+
+### Static methods and properties
 
 Use **publicMethod**/**publicProperty**/**publicGetter**/**publicSetter**.
 
 ```ts
 // Main process
-
-import { publicMethod, publicProperty, publicGetter, publicSetter, Access } from 'emr-bridge'
+import { publicMethod, publicProperty, publicGetter, publicSetter, Access } from 'emr-bridge/main'
 
 class User {
   private static name = 'Name'
@@ -130,59 +98,11 @@ class User {
 
 ### Methods and properties
 
-**Experimental decorators**
-
-Use **providePublic** and **publicMethod**/**publicProperty**.
-
-Without calling **providePublic**, public methods will not be accessible from renderer.
-
-```ts
-// Main process
-import { providePublic, publicMethod, publicProperty, Access } from 'emr-bridge/exp'
-
-class User {
-  private name = 'Name'
-  private age = 20
-  private money = 1000
-  
-  @publicProperty()
-  get balance(): string {
-    return `${this.money}$`
-  }
-  
-  set balance(newBalance: string) {
-    this.money = Number(newBalance.split('$')[0])
-  }
-  
-  @publicProperty({
-    name: 'userInfo',
-    access: Access.get
-  })
-  get info(): string {
-    return `Name: '${this.name}'; Age: '${this.age}'; Money: '${this.money}';`
-  }
-  
-  @publicMethod()
-  setName(newName: string): void {
-    this.name = newName
-  }
-  
-  @publicMethod('getUserAge')
-  getAge(): number {
-    return this.age
-  }
-}
-
-const user = providePublic(new User())
-```
-
-**New decorators**
-
 Use **publicMethod**/**publicProperty**/**publicGetter**/**publicSetter**.
 
 ```ts
 // Main process
-import { publicMethod, publicProperty, publicGetter, publicSetter, Access } from 'emr-bridge'
+import { publicMethod, publicProperty, publicGetter, publicSetter, Access } from 'emr-bridge/main'
 
 class User {
   private name = 'Name'
@@ -230,7 +150,7 @@ Use **publicFunction** and **publicVariable**.
 
 ```ts
 // Main process
-import { publicFunction, publicVariable } from 'emr-bridge'
+import { publicFunction, publicVariable } from 'emr-bridge/main'
 
 publicFunction('sayHello', sayHello)
 publicFunction('getUserName', getName)
@@ -269,13 +189,13 @@ Accessing an entity outside the specified scope will result in an error being th
 // Main process
 
 // static and non-static
-import { Scope, Access, providePublic, publicStaticMethod, publicMethod, publicProperty } from 'emr-bridge/exp'
+import { Scope, Access, publicMethod, publicGetter } from 'emr-bridge/main'
 
 class User {
   private static age = 20
   private name = 'Name'
   
-  @publicProperty({
+  @publicGetter({
     scope: Scope.preload,
     access: Access.get
   })
@@ -283,7 +203,7 @@ class User {
     return 30
   }
   
-  @publicStaticMethod({ scope: Scope.preload })
+  @publicMethod({ scope: Scope.preload })
   static getAge(): number {
     return this.age
   }
@@ -297,10 +217,13 @@ class User {
   }
 }
 
-providePublic(new User())
+new User()
+```
 
+```ts
+// Main process
 // functions and variables
-import { publicFunction, publicVariable, Scope } from 'emr-bridge'
+import { publicFunction, publicVariable, Scope } from 'emr-bridge/main'
 
 publicFunction('getName', getName, [Scope.preload])
 publicVariable('count', {
@@ -326,15 +249,14 @@ Using an entity outside the specified scope _will cause an error_.
 
 ```ts
 // Main process
-
 // static and non-static
-import { publicStaticProperty, publicProperty, providePublic, Access } from 'emr-bridge/exp'
+import { publicGetter, Access } from 'emr-bridge/main'
 
 class User {
   private static name = 'Name'
   private static surname = 'Surname'
   
-  @publicStaticProperty({ access: Access.get })
+  @publicGetter({ access: Access.get })
   static get fullName(): string {
     return `${this.name} ${this.surname}`
   }
@@ -348,10 +270,13 @@ class User {
   }
 }
 
-providePublic(new User())
+new User()
+```
 
+```ts
+// Main process
 // for variables
-import { publicVariable } from 'emr-bridge'
+import { publicVariable } from 'emr-bridge/main'
 
 publicVariable('count', {
   // get access
@@ -369,7 +294,7 @@ let count = 0
 
 ### Access from renderer and preload
 
-For _preload_, use **Main** from 'emr-bridge/preload'
+For _preload_, use **Main** from `emr-bridge/preload`
 
 ```ts
 // Preload process
@@ -377,13 +302,13 @@ import { Main, provideFromMain } from 'emr-bridge/preload'
 
 provideFromMain()
 
-type ProvidedPublic = {
+interface IProvidedPublic {
   getUserName(): string
   setUserAge(newAge: number): void
   count: number
 }
 
-const main = Main.as<ProvidedPublic>()
+const main = Main.as<IProvidedPublic>()
 
 main.getUserName()
 main.count++
@@ -396,13 +321,13 @@ For _renderer_, use **Bridge** from 'emr-bridge/renderer'
 // Renderer process
 import { Bridge } from 'emr-bridge/renderer'
 
-type ProvidedPublic = {
+interface IProvidedPublic {
   getUserName(): string
   setUserAge(newAge: number): void
   count: number
 }
 
-const bridge = Bridge.as<ProvidedPubic>()
+const bridge = Bridge.as<IProvidedPubic>()
 
 bridge.getUserName()
 bridge.count--
@@ -415,7 +340,7 @@ The library also allows you to pass Promises from main to renderer
 
 ```ts
 // Main process
-import { publicFunction } from 'emr-bridge'
+import { publicFunction } from 'emr-bridge/main'
 
 publicFunction('delay1s', () => {
   return new Promise<void>(resolve => {
@@ -436,3 +361,101 @@ const bridge = Bridge.as<IPublic>()
 
 bridge.delay1s().then(() => console.log('After 1 second'))
 ```
+
+### Events system
+
+If the event source is the **main** process
+
+```ts
+// Main process
+import { publicMainEvent, publicClassMainEvent } from 'emr-bridge/main'
+
+const tickWithReceiver = publicMainEvent('tickWithReceiver', () => (new Date().toTimeString()))
+setInterval(tickWithReceiver, 1000)
+
+// Or
+const tick = publicMainEvent('tick')
+setInterval(() => tick(new Date().toTimeString()), 1000)
+
+// The passed function receives the argument passed to the event and returns the value passed to the renderer process
+const pay = publicMainEvent('pay', (count: number) => `${count} $`)
+pay(200) // Send the string '200 $' to the renderer process
+
+
+// Or with classes
+class MainPublicEvents {
+  @publicClassMainEvent()
+  tick() {}
+
+  @publicClassMainEvent()
+  tickWithReceiver() { return new Date().toTimeString() }
+
+  @publicClassMainEvent()
+  pay(count: number) { return `${count} $` }
+}
+const events = new MainPublicEvents()
+setInterval(events.tickWithReceiver, 1000)
+setInterval(() => events.tick(new Date().toTimeString()), 1000)
+events.pay(200)
+```
+
+```ts
+// Renderer process
+import { Bridge, MainEvent } from 'emr-bridge/renderer'
+
+interface IPublic {
+  onTick: MainEvent<string>
+  onTickWithReceiver: MainEvent<string>
+  onPay: MainEvent<string>
+}
+
+const bridge = Bridge.as<IPublic>()
+// on + Capitalize<EventName>
+bridge.onTick(time => `Time from tick: ${console.log(time)}`)
+bridge.onTickWithReceiver(time => `Time from receiver: ${console.log(time)}`)
+bridge.onPay(count => `Dollars: ${count}`)
+```
+
+If the event source is the **renderer** process
+
+```ts
+// Main process
+import { publicRendererEvent, publicClassRendererEvent, RendererEvent } from 'emr-bridge/main'
+
+const onMessage = publicRendererEvent('onMessage'/* or 'message' */)
+onMessage(message => console.log(message))
+
+// With receiver
+const onMessageWithReceiver = publicRendererEvent('onMessageWithReceiver', (message: string) => `Message: ${message}`)
+onMessageWithReceiver(message => console.log(message))
+
+
+// Classes
+class RendererPublicEvents {
+  @publicClassRendererEvent()
+  onMessage!: RendererEvent<string>
+
+  @publicClassRendererEvent((message: string) => `Message: ${message}`)
+  onMessageWithReceiver!: RendererEvent<string>
+}
+const events = new RendererPublicEvents()
+events.onMessage(message => console.log(message))
+events.onMessageWithReceiver(message => console.log(message))
+```
+
+```ts
+// Renderer process
+import { Bridge } from 'emr-bridge/renderer'
+
+interface IPublic {
+  message(message: string): void
+  messageWithReceiver(message: string): void
+}
+
+const bridge = Bridge.as<IPublic>()
+// Uncapitalize<EventNameWithoutON>
+bridge.message('Message from renderer')
+bridge.messageWithReceiver('Hello, main process')
+```
+
+**NOTE**: The transmitted value can be `Promise`. In this case, the receiving party will wait for it to resolve and only then will call the handler

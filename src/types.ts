@@ -40,9 +40,15 @@ export interface IPublishMethodArgs {
   scope?: Scope
 }
 
-export interface IPublishEventArgs {
+export interface IPublishMainEventArgs {
   name?: string
   scope?: Scope
+}
+
+export interface IPublishRendererEventArgs {
+  name?: string
+  scope?: Scope
+  receiver?: EventReceiver
 }
 
 export interface IPublishPropertyArgs {
@@ -54,7 +60,8 @@ export interface IPublishPropertyArgs {
 export interface ICreateProviderArgs {
   info: IInfo
   scope: Scope
-  handleEvent(name: string, type: 'on' | 'once', handler: EventHandler<IIPCResult>): EventUnsubscriber
+  handleMainEvent(name: string, type: 'on' | 'once', handler: EventHandler<IIPCResult>): EventUnsubscriber
+  emitRendererEvent(name: string, arg: any): void
   callFunction(name: string, ...args: any[]): IIPCResult
   getVariable(name: string): IIPCResult
   setVariable(name: string, value: any): IIPCResult | undefined
@@ -64,8 +71,10 @@ export interface ICreateProviderArgs {
 export type Scopes = Record<string, Set<Scope>>
 export type Accesses = Record<string, Set<Access>>
 
+export type RendererEvent<T = undefined> = (handler: EventHandler<T>, isOnce?: boolean) => EventUnsubscriber
 export type MainEvent<T = undefined> = (handler: EventHandler<T>) => EventUnsubscriber
 export type EventEmitter = (...args: any[]) => any
+export type EventReceiver<I = any, O = any> = (input: I) => O
 export type EventUnsubscriber = () => void
 export type EventHandler<T> = (result: T) => void
 
@@ -78,7 +87,8 @@ export interface IProvider {
   waitPromise(name: string, resolve: (value: any) => void, reject?: (reason?: any) => void): void
   provided: {
     functions: Record<string, (...args: any[]) => IIPCResult>,
-    events: Record<string, (type: 'on' | 'once', handler: EventHandler<IIPCResult>) => EventUnsubscriber>
+    mainEvents: Record<string, (type: 'on' | 'once', handler: EventHandler<IIPCResult>) => EventUnsubscriber>
+    rendererEvents: Record<string, (arg: any) => void>
     properties: Record<string, IIPCResult>
   }
 }
@@ -93,7 +103,8 @@ export type PublicProperty = {
 export interface IInfo {
   properties: Set<string>
   functions: Set<string>
-  events: Set<string>
+  mainEvents: Set<string>
+  rendererEvents: Set<string>
   scopes: Scopes
   accesses: Accesses
 }

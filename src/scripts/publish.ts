@@ -3,47 +3,47 @@ import { WebContents, ipcMain } from 'electron'
 import { Access, IPCChannel, Scope } from '../enums'
 import type {
   EventEmitter,
+  EventHandler,
   IIPCResult,
   IInfo,
   PublicFunction,
-  PublicProperty
+  PublicProperty,
+  RendererEvent
 } from '../types'
 
 const publicInfo: IInfo = {
-  properties: new Set<string>(),
-  functions: new Set<string>(),
-  events: new Set<string>(),
+  properties: new Set(),
+  functions: new Set(),
+  mainEvents: new Set(),
+  rendererEvents: new Set(),
   accesses: {},
   scopes: {}
 }
 
 ipcMain.on(IPCChannel.getPublicInfo, e => e.returnValue = publicInfo)
 
-
 /**
- * Makes the event available for **renderer** and **preload** processes.
+ * Makes the event from **main** available for **renderer** and **preload** processes.
  *
- * _only for event_
  * @param name - name by which the event will be accessed
- * @param func - linked emitter
  * @param scopes - event scopes
  */
-export function publicEvent<Emitter extends EventEmitter>(name: string, func = (() => { }) as Emitter, scopes = [Scope.preload, Scope.renderer]): (...args: Parameters<Emitter>) => void {
-  const { events } = publicInfo
-  const emitChannel = IPCChannel.eventEmit + name
-  const handleChannel = IPCChannel.eventHandleOn + name
-  const handleChannelOnce = IPCChannel.eventHandleOnce + name
+export function publicMainEvent<Emitter extends EventEmitter>(name: string, receiver = ((v = undefined) => v) as Emitter, scopes = [Scope.preload, Scope.renderer]): (...args: Parameters<Emitter>) => void {
+  const { mainEvents } = publicInfo
+  const mainEmitChannel = IPCChannel.mainEventEmit + name
+  const mainHandleChannel = IPCChannel.mainEventOn + name
+  const mainHandleChannelOnce = IPCChannel.mainEventOnce + name
   let senders: WebContents[] = []
   let sendersOnce: WebContents[] = []
 
-  events.add(name)
+  mainEvents.add(name)
   if (!publicInfo.scopes[name])
     publicInfo.scopes[name] = new Set(scopes)
 
-  ipcMain.removeAllListeners(handleChannel)
-  ipcMain.removeAllListeners(handleChannelOnce)
-  ipcMain.on(handleChannel, ({ sender }) => !senders.includes(sender) && senders.push(sender))
-  ipcMain.on(handleChannelOnce, ({ sender }) => !sendersOnce.includes(sender) && sendersOnce.push(sender))
+  ipcMain.removeAllListeners(mainHandleChannel)
+  ipcMain.removeAllListeners(mainHandleChannelOnce)
+  ipcMain.on(mainHandleChannel, ({ sender }) => !senders.includes(sender) && senders.push(sender))
+  ipcMain.on(mainHandleChannelOnce, ({ sender }) => !sendersOnce.includes(sender) && sendersOnce.push(sender))
 
   return (...args: any[]) => {
     function filterSenders() {
@@ -55,31 +55,73 @@ export function publicEvent<Emitter extends EventEmitter>(name: string, func = (
     const allSenders = [...senders, ...sendersOnce]
 
     try {
-      const result = func(...args)
+      const result = receiver(...args)
       if (result instanceof Promise) {
-        const promiseChannel = emitChannel + IPCChannel.promisePostfix
         result
           .then(value => {
             filterSenders();
-            [...senders, ...sendersOnce].forEach(sender => sender.send(promiseChannel, { value } satisfies IIPCResult))
+            [...senders, ...sendersOnce].forEach(sender => sender.send(mainEmitChannel, { value } satisfies IIPCResult))
             sendersOnce = []
           })
           .catch(reason => {
             filterSenders();
-            [...senders, ...sendersOnce].forEach(sender => sender.send(promiseChannel, { error: String(reason) } satisfies IIPCResult))
+            [...senders, ...sendersOnce].forEach(sender => sender.send(mainEmitChannel, { error: String(reason) } satisfies IIPCResult))
             sendersOnce = []
           })
-
-        allSenders.forEach(sender => sender.send(promiseChannel, { promiseChannel } satisfies IIPCResult))
       }
       else {
-        allSenders.forEach(sender => sender.send(emitChannel, { value: result } satisfies IIPCResult))
+        allSenders.forEach(sender => sender.send(mainEmitChannel, { value: result } satisfies IIPCResult))
         sendersOnce = []
       }
     }
     catch (error) {
-      allSenders.forEach(sender => sender.send(emitChannel, { error: String(error) } satisfies IIPCResult))
+      allSenders.forEach(sender => sender.send(mainEmitChannel, { error: String(error) } satisfies IIPCResult))
       sendersOnce = []
+    }
+  }
+}
+
+/**
+ * Makes the event from **renderer** and **preload** available for **main** process.
+ *
+ * @param name - name by which the event will be accessed
+ * @param scopes - event scopes
+ */
+export function publicRendererEvent<I = undefined, O = I>(name: string, receiver = ((v = undefined as I) => v as unknown as O), scopes = [Scope.preload, Scope.renderer]): RendererEvent<O> {
+  if (name.startsWith('on')) {
+    name = name.replace('on', '')
+    name = `${name[0].toLowerCase()}${name.slice(1)}`
+  }
+
+  const { rendererEvents } = publicInfo
+  const rendererEmitChannel = IPCChannel.rendererEventEmit + name
+
+  const handlers = new Set<EventHandler<O>>()
+  const handlersOnce = new Set<EventHandler<O>>()
+
+  rendererEvents.add(name)
+  if (!publicInfo.scopes[name])
+    publicInfo.scopes[name] = new Set(scopes)
+
+  ipcMain.removeAllListeners(rendererEmitChannel)
+
+  ipcMain.on(rendererEmitChannel, (_, result: IIPCResult) => {
+    if (result.error) throw new Error(result.error)
+
+    const converted = receiver(result.value)
+    handlers.forEach(handler => handler(converted))
+    handlersOnce.forEach(handler => handler(converted))
+    handlersOnce.clear()
+  })
+
+  return (handler, isOnce = false) => {
+    if (isOnce) {
+      handlersOnce.add(handler)
+      return () => handlersOnce.delete(handler)
+    }
+    else {
+      handlers.add(handler)
+      return () => handlers.delete(handler)
     }
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "emr-bridge",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Allows you to easily give access to main methods from the renderer process",
   "main": "esm/index.js",
   "scripts": {
