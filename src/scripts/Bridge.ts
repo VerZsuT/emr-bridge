@@ -26,11 +26,11 @@ const Bridge = createProvider({
     return provider.provided.mainEvents[name](type, handler)
   },
   getVariable(name: string): IIPCResult {
-    return provider.provided.properties[name]
+    return provider.provided.properties[name].get()
   },
   setVariable(name: string, value: any): IIPCResult | undefined {
-    provider.provided.properties[name] = value
-    return
+    provider.provided.properties[name].set(value)
+    return undefined
   },
   waitPromise(channel: string): Promise<any> {
     return new Promise<any>((resolve, reject) => {

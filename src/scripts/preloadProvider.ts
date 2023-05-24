@@ -31,60 +31,50 @@ function provideFromMain(contextIsolation = true): void {
   }
 
   info.functions.forEach(funcName => {
-    Object.defineProperty(provider.provided.functions, funcName, {
-      value(...args: any[]): IIPCResult {
-        return ipcRenderer.sendSync(IPCChannel.functionCall + funcName, ...args)
-      },
-      enumerable: true
-    })
+    provider.provided.functions[funcName] = (...args: any[]): IIPCResult => {
+      return ipcRenderer.sendSync(IPCChannel.functionCall + funcName, ...args)
+    }
   })
-  info.rendererEvents.forEach(rendererEventName => {
-    Object.defineProperty(provider.provided.rendererEvents, rendererEventName, {
-      value(arg: any) {
-        const emitChannel = IPCChannel.rendererEventEmit + rendererEventName
+  info.rendererEvents.forEach(eventName => {
+    provider.provided.rendererEvents[eventName] = (arg: any) => {
+      const emitChannel = IPCChannel.rendererEventEmit + eventName
 
-        if (arg instanceof Promise) {
-          arg
-            .then(value => ipcRenderer.send(emitChannel, { value } satisfies IIPCResult))
-            .catch(reason => ipcRenderer.send(emitChannel, { error: String(reason) } satisfies IIPCResult))
-        }
-        else {
-          ipcRenderer.send(emitChannel, { value: arg } satisfies IIPCResult)
-        }
-      },
-      enumerable: true
-    })
+      if (arg instanceof Promise) {
+        arg
+          .then(value => ipcRenderer.send(emitChannel, { value } satisfies IIPCResult))
+          .catch(reason => ipcRenderer.send(emitChannel, { error: String(reason) } satisfies IIPCResult))
+      }
+      else {
+        ipcRenderer.send(emitChannel, { value: arg } satisfies IIPCResult)
+      }
+    }
   })
-  info.mainEvents.forEach(mainEventName => {
-    Object.defineProperty(provider.provided.mainEvents, mainEventName, {
-      value(type: 'on' | 'once', handler: (result: IIPCResult) => any) {
-        const listener = (_: any, result: IIPCResult) => handler(result)
-        const emitChannel = IPCChannel.mainEventEmit + mainEventName
+  info.mainEvents.forEach(eventName => {
+    provider.provided.mainEvents[eventName] = (type: 'on' | 'once', handler: (result: IIPCResult) => any) => {
+      const listener = (_: any, result: IIPCResult) => handler(result)
+      const emitChannel = IPCChannel.mainEventEmit + eventName
 
-        if (type === 'on') {
-          ipcRenderer.on(emitChannel, listener)
-          ipcRenderer.send(IPCChannel.mainEventOn + mainEventName)
-        }
-        else {
-          ipcRenderer.once(emitChannel, listener)
-          ipcRenderer.send(IPCChannel.mainEventOnce + mainEventName)
-        }
+      if (type === 'on') {
+        ipcRenderer.on(emitChannel, listener)
+        ipcRenderer.send(IPCChannel.mainEventOn + eventName)
+      }
+      else {
+        ipcRenderer.once(emitChannel, listener)
+        ipcRenderer.send(IPCChannel.mainEventOnce + eventName)
+      }
 
-        return () => ipcRenderer.removeListener(emitChannel, listener)
-      },
-      enumerable: true
-    })
+      return () => ipcRenderer.removeListener(emitChannel, listener)
+    }
   })
   info.properties.forEach(propName => {
-    Object.defineProperty(provider.provided.properties, propName, {
+    provider.provided.properties[propName] = {
       get(): IIPCResult {
         return ipcRenderer.sendSync(IPCChannel.propertyGet + propName)
       },
       set(value: any) {
         ipcRenderer.sendSync(IPCChannel.propertySet + propName, value)
-      },
-      enumerable: true
-    })
+      }
+    }
   })
 
   if (contextIsolation)

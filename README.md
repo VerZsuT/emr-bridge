@@ -24,11 +24,11 @@ npm i emr-bridge
 
 ## Usage
 
-_If you need CommonJS modules, then use `emr-bridge/cjs`_
+*If you need CommonJS modules, then use `emr-bridge/cjs`*
 
 There are three ways to use
 
-**IMPORTANT**: In any of the cases, you need to insert this code into preload
+> In any of the cases, you need to insert this code into preload
 
 ```js
 // Preload process
@@ -37,7 +37,7 @@ import { provideFromMain } from 'emr-bridge/preload'
 provideFromMain(true /* context isolation */)
 ```
 
-**IMPORTANT**: To use experimental non-static decorators, it is required to wrap the creation of a class instance in the `providePublic` function
+> To use experimental non-static decorators, it is required to wrap the creation of a class instance in the `providePublic` function
 
 ```js
 // Main process
@@ -48,7 +48,7 @@ class MainPublic { /*...*/ }
 const instance = providePublic(new MainPublic())
 ```
 
-**NOTE**: All experimental decorators can be found in `emr-bridge/exp`
+> All experimental decorators can be found in `emr-bridge/exp`
 
 ### Static methods and properties
 

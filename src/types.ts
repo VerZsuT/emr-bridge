@@ -89,7 +89,7 @@ export interface IProvider {
     functions: Record<string, (...args: any[]) => IIPCResult>,
     mainEvents: Record<string, (type: 'on' | 'once', handler: EventHandler<IIPCResult>) => EventUnsubscriber>
     rendererEvents: Record<string, (arg: any) => void>
-    properties: Record<string, IIPCResult>
+    properties: Record<string, { get(): IIPCResult, set(val: any): void }>
   }
 }
 
