@@ -16,8 +16,8 @@ const publicInfo: IInfo = {
   functions: new Set(),
   mainEvents: new Set(),
   rendererEvents: new Set(),
-  accesses: {},
-  scopes: {}
+  accesses: new Map(),
+  scopes: new Map()
 }
 
 ipcMain.on(IPCChannel.getPublicInfo, e => e.returnValue = publicInfo)
@@ -37,8 +37,12 @@ export function publicMainEvent<Emitter extends EventEmitter>(name: string, rece
   let sendersOnce: WebContents[] = []
 
   mainEvents.add(name)
-  if (!publicInfo.scopes[name])
-    publicInfo.scopes[name] = new Set(scopes)
+  const rendererNameOn = `on${name[0].toUpperCase()}${name.slice(1)}`
+  const rendererNameOnce = `once${name[0].toUpperCase()}${name.slice(1)}`
+  if (!publicInfo.scopes.has(rendererNameOn)) {
+    publicInfo.scopes.set(rendererNameOn, new Set(scopes))
+    publicInfo.scopes.set(rendererNameOnce, new Set(scopes))
+  }
 
   ipcMain.removeAllListeners(mainHandleChannel)
   ipcMain.removeAllListeners(mainHandleChannelOnce)
@@ -100,8 +104,8 @@ export function publicRendererEvent<I = undefined, O = I>(name: string, receiver
   const handlersOnce = new Set<EventHandler<O>>()
 
   rendererEvents.add(name)
-  if (!publicInfo.scopes[name])
-    publicInfo.scopes[name] = new Set(scopes)
+  if (!publicInfo.scopes.has(name))
+    publicInfo.scopes.set(name, new Set(scopes))
 
   ipcMain.removeAllListeners(rendererEmitChannel)
 
@@ -139,8 +143,8 @@ export function publicFunction(name: string, func: PublicFunction, scopes = [Sco
   const channel = IPCChannel.functionCall + name
 
   functions.add(name)
-  if (!publicInfo.scopes[name])
-    publicInfo.scopes[name] = new Set(scopes)
+  if (!publicInfo.scopes.has(name))
+    publicInfo.scopes.set(name, new Set(scopes))
 
   ipcMain.removeAllListeners(channel)
   ipcMain.on(channel, (e, ...args) => {
@@ -179,17 +183,17 @@ export function publicVariable(name: string, value: PublicProperty, scopes = [Sc
   const { get: getter, set: setter } = value
 
   properties.add(name)
-  if (!publicInfo.scopes[name])
-    publicInfo.scopes[name] = new Set(scopes)
+  if (!publicInfo.scopes.has(name))
+    publicInfo.scopes.set(name, new Set(scopes))
 
-  if (!publicInfo.accesses[name]) {
+  if (!publicInfo.accesses.has(name)) {
     const accesses: Access[] = []
     getter && accesses.push(Access.get)
     setter && accesses.push(Access.set)
-    publicInfo.accesses[name] = new Set(accesses)
+    publicInfo.accesses.set(name, new Set(accesses))
   }
   else {
-    const accesses = publicInfo.accesses[name]
+    const accesses = publicInfo.accesses.get(name)!
     getter && accesses.add(Access.get)
     setter && accesses.add(Access.set)
   }
@@ -222,9 +226,9 @@ export function publicVariable(name: string, value: PublicProperty, scopes = [Sc
 }
 
 export function addScope(key: string, scope: Scope): void {
-  publicInfo.scopes[key] = new Set([scope])
+  publicInfo.scopes.set(key, new Set([scope]))
 }
 
 export function addAccess(key: string, access: Access): void {
-  publicInfo.accesses[key] = new Set([access])
+  publicInfo.accesses.set(key, new Set([access]))
 }

@@ -26,7 +26,7 @@ function provideFromMain(contextIsolation = true): void {
       properties: {},
       functions: {},
       mainEvents: {},
-      rendererEvents: {}
+      rendererEvents: {},
     }
   }
 

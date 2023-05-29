@@ -213,11 +213,11 @@ export function publicProperty(arg?: string | IPublishPropertyArgs): ClassProper
     context.addInitializer(function (this: This) {
       publicVariable(name, {
         get: () => {
-          // @ts-ignore
+          // @ts-expect-error
           return this[key]
         },
         set: (value: any) => {
-          // @ts-ignore
+          // @ts-expect-error
           this[key] = value
         }
       })

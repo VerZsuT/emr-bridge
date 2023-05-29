@@ -68,8 +68,8 @@ export interface ICreateProviderArgs {
   waitPromise(channel: string): Promise<any>
 }
 
-export type Scopes = Record<string, Set<Scope>>
-export type Accesses = Record<string, Set<Access>>
+export type Scopes = Map<string, Set<Scope>>
+export type Accesses = Map<string, Set<Access>>
 
 export type RendererEvent<T = undefined> = (handler: EventHandler<T>, isOnce?: boolean) => EventUnsubscriber
 export type MainEvent<T = undefined> = (handler: EventHandler<T>) => EventUnsubscriber

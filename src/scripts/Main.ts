@@ -1,6 +1,6 @@
 import { ipcRenderer } from 'electron'
 import { IPCChannel, Scope } from '../enums'
-import type { IIPCResult, IInfo } from '../types'
+import type { EventUnsubscriber, IIPCResult, IInfo } from '../types'
 import createProvider from './provider'
 
 const info: IInfo | undefined = ipcRenderer.sendSync(IPCChannel.getPublicInfo)
@@ -14,12 +14,11 @@ if (!info)
  * _only for preload process_
  */
 const Main = createProvider({
-  info,
-  scope: Scope.preload,
+  info, scope: Scope.preload,
   callFunction(name: string, ...args): IIPCResult {
     return ipcRenderer.sendSync(IPCChannel.functionCall + name, ...args)
   },
-  handleMainEvent(name, type, handler) {
+  handleMainEvent(name, type, handler): EventUnsubscriber {
     const listener = (_: any, result: IIPCResult) => handler(result)
     const emitChannel = IPCChannel.mainEventEmit + name
 
@@ -34,7 +33,7 @@ const Main = createProvider({
 
     return () => ipcRenderer.removeListener(emitChannel, listener)
   },
-  emitRendererEvent(name, arg) {
+  emitRendererEvent(name, arg): void {
     const emitChannel = IPCChannel.rendererEventEmit + name
 
     if (arg instanceof Promise) {

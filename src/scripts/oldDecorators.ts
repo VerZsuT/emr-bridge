@@ -98,50 +98,6 @@ export function publicMethod(arg?: string | IPublishMethodArgs): MethodDecorator
 /**
  * Makes the event available for **renderer** and **preload** processes.
  *
- * _only for static_
- * 
- * _experimental decorators_
- */
-export function publicStaticMainEvent(): MethodDecorator
-/**
- * Makes the event available for **renderer** and **preload** processes.
- *
- * _only for static_
- * 
- * _experimental decorators_
- * @param name - name by which the event will be accessed
- */
-export function publicStaticMainEvent(name: string): MethodDecorator
-/**
- * Makes the event available for **renderer** and **preload** processes.
- *
- * _only for static_
- * 
- * _experimental decorators_
- * @param args - publish args
- */
-export function publicStaticMainEvent(args: IPublishMainEventArgs): MethodDecorator
-export function publicStaticMainEvent(arg?: string | IPublishMainEventArgs): MethodDecorator {
-  return (target: any, key: string | symbol) => {
-    let name = String(key)
-
-    if (arg) {
-      if (typeof arg === 'string') {
-        name = arg
-      }
-      else {
-        name = arg.name ?? String(key)
-        if (arg.scope) addScope(name, arg.scope)
-      }
-    }
-
-    target[key] = publicMainEvent(name, target[key].bind(target))
-  }
-}
-
-/**
- * Makes the event available for **renderer** and **preload** processes.
- *
  * _only for non-static_
  * 
  * _experimental decorators_
@@ -177,85 +133,20 @@ export function publicClassMainEvent(arg?: string | IPublishMainEventArgs): Meth
     const prevRegister = target.__register__ ?? (() => { })
     target.__register__ = instance => {
       prevRegister(instance)
-      publicStaticMainEvent(<string>arg)(instance, key, _)
+      let name = String(key)
+
+      if (arg) {
+        if (typeof arg === 'string') {
+          name = arg
+        }
+        else {
+          name = arg.name ?? String(key)
+          if (arg.scope) addScope(name, arg.scope)
+        }
+      }
+
+      instance[key] = publicMainEvent(name, instance[key].bind(instance))
     }
-  }
-}
-
-/**
- * Makes the event from **renderer** and **preload** available for **main** process.
- *
- * _only for static_
- * 
- * _experimental decorators_
- */
-export function publicStaticRendererEvent(): PropertyDecorator
-/**
- * Makes the event from **renderer** and **preload** available for **main** process.
- *
- * _only for static_
- * 
- * _experimental decorators_
- * @param name - name by which the event will be accessed
- */
-export function publicStaticRendererEvent(name: string): PropertyDecorator
-/**
- * Makes the event from **renderer** and **preload** available for **main** process.
- *
- * _only for static_
- * 
- * _experimental decorators_
- * @param receiver - linked receiver
- */
-export function publicStaticRendererEvent(receiver: EventReceiver): PropertyDecorator
-/**
- * Makes the event from **renderer** and **preload** available for **main** process.
- *
- * _only for static_
- * 
- * _experimental decorators_
- * @param name - name by which the event will be accessed
- * @param receiver - linked receiver
- */
-export function publicStaticRendererEvent(name: string, receiver: EventReceiver): PropertyDecorator
-/**
- * Makes the event from **renderer** and **preload** available for **main** process.
- *
- * _only for static_
- * 
- * _experimental decorators_
- * @param args - publish args
- */
-export function publicStaticRendererEvent(args: IPublishRendererEventArgs): PropertyDecorator
-/**
- * Makes the event from **renderer** and **preload** available for **main** process.
- *
- * _only for static_
- * 
- * _experimental decorators_
- * @param args - publish args
- */
-export function publicStaticRendererEvent(args: IPublishRendererEventArgs): PropertyDecorator
-export function publicStaticRendererEvent(arg?: string | EventReceiver | IPublishRendererEventArgs): PropertyDecorator {
-  return (target: any, key: string | symbol) => {
-    let name = String(key)
-    let receiver = (v: any) => v
-
-    if (arg) {
-      if (typeof arg === 'string') {
-        name = arg
-      }
-      else if (typeof arg === 'object') {
-        name = arg.name ?? String(key)
-        receiver = arg.receiver ?? receiver
-        if (arg.scope) addScope(name, arg.scope)
-      }
-      else {
-        receiver = arg
-      }
-    }
-
-    target[key] = publicRendererEvent(name, receiver)
   }
 }
 
@@ -319,7 +210,24 @@ export function publicClassRendererEvent(arg?: string | EventReceiver | IPublish
     const prevRegister = target.__register__ ?? (() => { })
     target.__register__ = instance => {
       prevRegister(instance)
-      publicStaticRendererEvent(<string>arg)(instance, key)
+      let name = String(key)
+      let receiver = (v: any) => v
+
+      if (arg) {
+        if (typeof arg === 'string') {
+          name = arg
+        }
+        else if (typeof arg === 'object') {
+          name = arg.name ?? String(key)
+          receiver = arg.receiver ?? receiver
+          if (arg.scope) addScope(name, arg.scope)
+        }
+        else {
+          receiver = arg
+        }
+      }
+
+      instance[key] = publicRendererEvent(name, receiver)
     }
   }
 }

@@ -1,5 +1,5 @@
 import { Scope } from '../enums'
-import type { IIPCResult } from '../types'
+import type { EventUnsubscriber, IIPCResult } from '../types'
 import createProvider from './provider'
 
 if (!window.__provider__)
@@ -14,15 +14,14 @@ const info = provider.getInfo()
  * _only for renderer process_
  */
 const Bridge = createProvider({
-  info,
-  scope: Scope.renderer,
+  info, scope: Scope.renderer,
   callFunction(name: string, ...args): IIPCResult {
     return provider.provided.functions[name](...args)
   },
-  emitRendererEvent(name, arg) {
+  emitRendererEvent(name, arg): void {
     provider.provided.rendererEvents[name](arg)
   },
-  handleMainEvent(name, type, handler) {
+  handleMainEvent(name, type, handler): EventUnsubscriber {
     return provider.provided.mainEvents[name](type, handler)
   },
   getVariable(name: string): IIPCResult {
