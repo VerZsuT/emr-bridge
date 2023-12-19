@@ -8,7 +8,6 @@ export enum Scope {
   preload = 'preload'
 }
 
-
 export enum IPCChannel {
   getPublicInfo = 'GET_PUBLIC_INFO',
   functionCall = 'FUNCTION_CALL_',

@@ -23,6 +23,7 @@ export function publicMethod(): ClassMethodDecorator
  * Makes the method available for **renderer** and **preload** processes.
  * 
  * _only new decorators_
+ * 
  * @param name - name by which the method will be accessed
 */
 export function publicMethod(name: string): ClassMethodDecorator
@@ -30,6 +31,7 @@ export function publicMethod(name: string): ClassMethodDecorator
  * Makes the method available for **renderer** and **preload** processes.
  * 
  * _only new decorators_
+ * 
  * @param args - publish args
  */
 export function publicMethod(args: IPublishMethodArgs): ClassMethodDecorator
@@ -66,6 +68,7 @@ export function publicClassMainEvent(): ClassMethodDecorator
  * Makes the event available for **renderer** and **preload** processes.
  * 
  * _only new decorators_
+ * 
  * @param name - name by which the event will be accessed
 */
 export function publicClassMainEvent(name: string): ClassMethodDecorator
@@ -73,6 +76,7 @@ export function publicClassMainEvent(name: string): ClassMethodDecorator
  * Makes the event available for **renderer** and **preload** processes.
  * 
  * _only new decorators_
+ * 
  * @param args - publish args
  */
 export function publicClassMainEvent(args: IPublishMainEventArgs): ClassMethodDecorator
@@ -102,27 +106,30 @@ export function publicClassMainEvent(arg?: string | IPublishMainEventArgs): Clas
 
 /**
  * Makes the event from **renderer** and **preload** available for **main** process.
- *
+ * 
  * _only new decorators_
  */
 export function publicClassRendererEvent(): ClassPropertyDecorator
 /**
  * Makes the event from **renderer** and **preload** available for **main** process.
- *
+ * 
  * _only new decorators_
+ * 
  * @param name - name by which the event will be accessed
  */
 export function publicClassRendererEvent(name: string): ClassPropertyDecorator
 /**
  * Makes the event from **renderer** and **preload** available for **main** process.
- *
+ * 
  * _only new decorators_
+ * 
  * @param receiver - linked receiver
  */
 export function publicClassRendererEvent(receiver: EventReceiver): ClassPropertyDecorator
 /**
  * Makes the event from **renderer** and **preload** available for **main** process.
- *
+ * 
+ * * _only new decorators_
  * 
  * @param name - name by which the event will be accessed
  * @param receiver - linked receiver
@@ -130,15 +137,9 @@ export function publicClassRendererEvent(receiver: EventReceiver): ClassProperty
 export function publicClassRendererEvent(name: string, receiver: EventReceiver): ClassPropertyDecorator
 /**
  * Makes the event from **renderer** and **preload** available for **main** process.
- *
- * _only new decorators_
- * @param args - publish args
- */
-export function publicClassRendererEvent(args: IPublishRendererEventArgs): ClassPropertyDecorator
-/**
- * Makes the event from **renderer** and **preload** available for **main** process.
  * 
  * _only new decorators_
+ * 
  * @param args - publish args
  */
 export function publicClassRendererEvent(args: IPublishRendererEventArgs): ClassPropertyDecorator
@@ -156,7 +157,7 @@ export function publicClassRendererEvent(arg?: string | EventReceiver | IPublish
       }
       else if (typeof arg === 'object') {
         name = arg.name ?? String(context.name)
-        receiver = arg.receiver ?? receiver
+        receiver = arg.procFn ?? receiver
         if (arg.scope) addScope(name, arg.scope)
       }
       else {
@@ -181,6 +182,7 @@ export function publicProperty(): ClassPropertyDecorator
  * Makes the property available for **renderer** and **preload** processes.
  * 
  * _only new decorators_
+ * 
  * @param name - name by which the property will be accessed
  */
 export function publicProperty(name: string): ClassPropertyDecorator
@@ -188,6 +190,7 @@ export function publicProperty(name: string): ClassPropertyDecorator
  * Makes the property available for **renderer** and **preload** processes.
  * 
  * _only new decorators_
+ * 
  * @param args - publish args
  */
 export function publicProperty(args: IPublishPropertyArgs): ClassPropertyDecorator
@@ -235,6 +238,7 @@ export function publicGetter(): ClassGetterDecorator
  * Makes the property getter available for **renderer** and **preload** processes.
  * 
  * _only new decorators_
+ * 
  * @param name - name by which the property will be accessed
  */
 export function publicGetter(name: string): ClassGetterDecorator
@@ -242,6 +246,7 @@ export function publicGetter(name: string): ClassGetterDecorator
  * Makes the property getter available for **renderer** and **preload** processes.
  * 
  * _only new decorators_
+ * 
  * @param args - publish args
  */
 export function publicGetter(args: PublishGetterArgs): ClassGetterDecorator
@@ -280,6 +285,7 @@ export function publicSetter(): ClassSetterDecorator
  * Makes the property setter available for **renderer** and **preload** processes.
  * 
  * _only new decorators_
+ * 
  * @param name - name by which the property will be accessed
  */
 export function publicSetter(name: string): ClassSetterDecorator
@@ -287,6 +293,7 @@ export function publicSetter(name: string): ClassSetterDecorator
  * Makes the property setter available for **renderer** and **preload** processes.
  * 
  * _only new decorators_
+ * 
  * @param args - publish args
  */
 export function publicSetter(args: PublishSetterArgs): ClassSetterDecorator

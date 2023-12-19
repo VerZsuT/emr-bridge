@@ -1,8 +1,16 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import Electron from 'electron'
 import { IPCChannel } from '../enums'
 import type { IIPCResult, IInfo, IProvider } from '../types'
 
-const info: IInfo = ipcRenderer.sendSync(IPCChannel.getPublicInfo)
+/** Выбрасывает ошибку если используется не в том процессе */
+let mayThrowError: () => void | never = () => { }
+
+if (typeof window === 'undefined') {
+  mayThrowError = () => { throw new Error('"provideFromMain" is unavailable in main process.') }
+}
+else if (!Electron.contextBridge) {
+  mayThrowError = () => { throw new Error('"provideFromMain" is unavailable in renderer process.') }
+}
 
 /**
  * Sets access to main from renderer
@@ -10,6 +18,11 @@ const info: IInfo = ipcRenderer.sendSync(IPCChannel.getPublicInfo)
  * @param contextIsolation - _default_: `true`
  */
 function provideFromMain(contextIsolation = true): void {
+  mayThrowError()
+
+  const { contextBridge, ipcRenderer } = Electron
+  const info: IInfo = ipcRenderer.sendSync(IPCChannel.getPublicInfo)
+
   const provider: IProvider = {
     getInfo(): IInfo {
       return info

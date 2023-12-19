@@ -32,7 +32,7 @@ There are three ways to use
 
 ```js
 // Preload process
-import { provideFromMain } from 'emr-bridge/preload'
+import { provideFromMain } from 'emr-bridge'
 
 provideFromMain(true /* context isolation */)
 ```
@@ -41,7 +41,7 @@ provideFromMain(true /* context isolation */)
 
 ```js
 // Main process
-import { providePublic } from 'emr-bridge/main/exp'
+import { providePublic } from 'emr-bridge/exp'
 
 class MainPublic { /*...*/ }
 
@@ -56,7 +56,7 @@ Use **publicMethod**/**publicProperty**/**publicGetter**/**publicSetter**.
 
 ```ts
 // Main process
-import { publicMethod, publicProperty, publicGetter, publicSetter, Access } from 'emr-bridge/main'
+import { publicMethod, publicProperty, publicGetter, publicSetter, Access } from 'emr-bridge'
 
 class User {
   private static name = 'Name'
@@ -102,7 +102,7 @@ Use **publicMethod**/**publicProperty**/**publicGetter**/**publicSetter**.
 
 ```ts
 // Main process
-import { publicMethod, publicProperty, publicGetter, publicSetter, Access } from 'emr-bridge/main'
+import { publicMethod, publicProperty, publicGetter, publicSetter, Access } from 'emr-bridge'
 
 class User {
   private name = 'Name'
@@ -150,7 +150,7 @@ Use **publicFunction** and **publicVariable**.
 
 ```ts
 // Main process
-import { publicFunction, publicVariable } from 'emr-bridge/main'
+import { publicFunction, publicVariable } from 'emr-bridge'
 
 publicFunction('sayHello', sayHello)
 publicFunction('getUserName', getName)
@@ -189,7 +189,7 @@ Accessing an entity outside the specified scope will result in an error being th
 // Main process
 
 // static and non-static
-import { Scope, Access, publicMethod, publicGetter } from 'emr-bridge/main'
+import { Scope, Access, publicMethod, publicGetter } from 'emr-bridge'
 
 class User {
   private static age = 20
@@ -223,7 +223,7 @@ new User()
 ```ts
 // Main process
 // functions and variables
-import { publicFunction, publicVariable, Scope } from 'emr-bridge/main'
+import { publicFunction, publicVariable, Scope } from 'emr-bridge'
 
 publicFunction('getName', getName, [Scope.preload])
 publicVariable('count', {
@@ -250,7 +250,7 @@ Using an entity outside the specified scope _will cause an error_.
 ```ts
 // Main process
 // static and non-static
-import { publicGetter, Access } from 'emr-bridge/main'
+import { publicGetter, Access } from 'emr-bridge'
 
 class User {
   private static name = 'Name'
@@ -276,7 +276,7 @@ new User()
 ```ts
 // Main process
 // for variables
-import { publicVariable } from 'emr-bridge/main'
+import { publicVariable } from 'emr-bridge'
 
 publicVariable('count', {
   // get access
@@ -294,11 +294,11 @@ let count = 0
 
 ### Access from renderer and preload
 
-For _preload_, use **Main** from `emr-bridge/preload`
+For _preload_, use **Main**
 
 ```ts
 // Preload process
-import { Main, provideFromMain } from 'emr-bridge/preload'
+import { Main, provideFromMain } from 'emr-bridge'
 
 provideFromMain()
 
@@ -315,11 +315,11 @@ main.count++
 main.setUserAge(20)
 ```
 
-For _renderer_, use **Bridge** from 'emr-bridge/renderer'
+For _renderer_, use **Bridge**
 
 ```ts
 // Renderer process
-import { Bridge } from 'emr-bridge/renderer'
+import { Bridge } from 'emr-bridge'
 
 interface IProvidedPublic {
   getUserName(): string
@@ -340,7 +340,7 @@ The library also allows you to pass Promises from main to renderer
 
 ```ts
 // Main process
-import { publicFunction } from 'emr-bridge/main'
+import { publicFunction } from 'emr-bridge'
 
 publicFunction('delay1s', () => {
   return new Promise<void>(resolve => {
@@ -351,7 +351,7 @@ publicFunction('delay1s', () => {
 
 ```ts
 // Renderer process
-import { Bridge } from 'emr-bridge/renderer'
+import { Bridge } from 'emr-bridge'
 
 interface IPublic {
   delay1s(): Promise<void>
@@ -368,7 +368,7 @@ If the event source is the **main** process
 
 ```ts
 // Main process
-import { publicMainEvent, publicClassMainEvent } from 'emr-bridge/main'
+import { publicMainEvent, publicClassMainEvent } from 'emr-bridge'
 
 const tickWithReceiver = publicMainEvent('tickWithReceiver', () => (new Date().toTimeString()))
 setInterval(tickWithReceiver, 1000)
@@ -401,7 +401,7 @@ events.pay(200)
 
 ```ts
 // Renderer process
-import { Bridge, MainEvent } from 'emr-bridge/renderer'
+import { Bridge, MainEvent } from 'emr-bridge'
 
 interface IPublic {
   onTick: MainEvent<string>
@@ -420,9 +420,9 @@ If the event source is the **renderer** process
 
 ```ts
 // Main process
-import { publicRendererEvent, publicClassRendererEvent, RendererEvent } from 'emr-bridge/main'
+import { publicRendererEvent, publicClassRendererEvent, RendererEvent } from 'emr-bridge'
 
-const onMessage = publicRendererEvent('onMessage'/* or 'message' */)
+const onMessage = publicRendererEvent<string>('onMessage'/* or 'message' */)
 onMessage(message => console.log(message))
 
 // With receiver
@@ -445,7 +445,7 @@ events.onMessageWithReceiver(message => console.log(message))
 
 ```ts
 // Renderer process
-import { Bridge } from 'emr-bridge/renderer'
+import { Bridge } from 'emr-bridge'
 
 interface IPublic {
   message(message: string): void

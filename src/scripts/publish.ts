@@ -1,8 +1,8 @@
-import { WebContents, ipcMain } from 'electron'
+import type { WebContents } from 'electron'
+import Electron from 'electron'
 
 import { Access, IPCChannel, Scope } from '../enums'
 import type {
-  EventEmitter,
   EventHandler,
   IIPCResult,
   IInfo,
@@ -20,15 +20,32 @@ const publicInfo: IInfo = {
   scopes: new Map()
 }
 
-ipcMain.on(IPCChannel.getPublicInfo, e => e.returnValue = publicInfo)
+/** Выбрасывает ошибку если используется не в том процессе */
+let mayThrowError: () => void | never = () => { }
+
+if (typeof window !== 'undefined' || !Electron.ipcMain) {
+  mayThrowError = () => { throw new Error('Publish methods is available only in main process.') }
+}
+else {
+  Electron.ipcMain.on(IPCChannel.getPublicInfo, e => e.returnValue = publicInfo)
+}
 
 /**
  * Makes the event from **main** available for **renderer** and **preload** processes.
  *
  * @param name - name by which the event will be accessed
+ * @param procFn - function of processing before sending the event
  * @param scopes - event scopes
  */
-export function publicMainEvent<Emitter extends EventEmitter>(name: string, receiver = ((v = undefined) => v) as Emitter, scopes = [Scope.preload, Scope.renderer]): (...args: Parameters<Emitter>) => void {
+export function publicMainEvent<
+  In = void,
+  Out = In extends Array<any> ? In[0] : In,
+  ProcFn extends (...args: any[]) => any = In extends Array<any> ? (...args: In) => Out : (val: In) => Out
+>
+  (name: string, procFn: ProcFn = <any>((...args: any[]) => args[0]), scopes = [Scope.preload, Scope.renderer]): (...args: Parameters<ProcFn>) => void {
+  mayThrowError()
+  const { ipcMain } = Electron
+
   const { mainEvents } = publicInfo
   const mainEmitChannel = IPCChannel.mainEventEmit + name
   const mainHandleChannel = IPCChannel.mainEventOn + name
@@ -49,7 +66,7 @@ export function publicMainEvent<Emitter extends EventEmitter>(name: string, rece
   ipcMain.on(mainHandleChannel, ({ sender }) => !senders.includes(sender) && senders.push(sender))
   ipcMain.on(mainHandleChannelOnce, ({ sender }) => !sendersOnce.includes(sender) && sendersOnce.push(sender))
 
-  return (...args: any[]) => {
+  return (...args) => {
     function filterSenders() {
       senders = senders.filter(sender => !sender.isDestroyed())
       sendersOnce = sendersOnce.filter(sender => !sender.isDestroyed())
@@ -59,7 +76,7 @@ export function publicMainEvent<Emitter extends EventEmitter>(name: string, rece
     const allSenders = [...senders, ...sendersOnce]
 
     try {
-      const result = receiver(...args)
+      const result = procFn(...args)
       if (result instanceof Promise) {
         result
           .then(value => {
@@ -89,9 +106,17 @@ export function publicMainEvent<Emitter extends EventEmitter>(name: string, rece
  * Makes the event from **renderer** and **preload** available for **main** process.
  *
  * @param name - name by which the event will be accessed
+ * @param procFn - processing function before calling handlers
  * @param scopes - event scopes
  */
-export function publicRendererEvent<I = undefined, O = I>(name: string, receiver = ((v = undefined as I) => v as unknown as O), scopes = [Scope.preload, Scope.renderer]): RendererEvent<O> {
+export function publicRendererEvent<
+  In = void,
+  Out = In,
+  ProcFn extends (...args: any[]) => any = (v?: In) => Out
+>(name: string, procFn: ProcFn = <any>((v?: In) => v), scopes = [Scope.preload, Scope.renderer]): RendererEvent<Out> {
+  mayThrowError()
+  const { ipcMain } = Electron
+
   if (name.startsWith('on')) {
     name = name.replace('on', '')
     name = `${name[0].toLowerCase()}${name.slice(1)}`
@@ -100,8 +125,8 @@ export function publicRendererEvent<I = undefined, O = I>(name: string, receiver
   const { rendererEvents } = publicInfo
   const rendererEmitChannel = IPCChannel.rendererEventEmit + name
 
-  const handlers = new Set<EventHandler<O>>()
-  const handlersOnce = new Set<EventHandler<O>>()
+  const handlers = new Set<EventHandler<Out>>()
+  const handlersOnce = new Set<EventHandler<Out>>()
 
   rendererEvents.add(name)
   if (!publicInfo.scopes.has(name))
@@ -112,7 +137,7 @@ export function publicRendererEvent<I = undefined, O = I>(name: string, receiver
   ipcMain.on(rendererEmitChannel, (_, result: IIPCResult) => {
     if (result.error) throw new Error(result.error)
 
-    const converted = receiver(result.value)
+    const converted = procFn(result.value)
     handlers.forEach(handler => handler(converted))
     handlersOnce.forEach(handler => handler(converted))
     handlersOnce.clear()
@@ -134,11 +159,15 @@ export function publicRendererEvent<I = undefined, O = I>(name: string, receiver
  * Makes the function available for **renderer** and **preload** processes.
  *
  * _only for function_
+ * 
  * @param name - name by which the function will be accessed
  * @param func - linked function
  * @param scopes - function scopes
  */
-export function publicFunction(name: string, func: PublicFunction, scopes = [Scope.preload, Scope.renderer]): void {
+export function publicFunction<F extends PublicFunction>(name: string, func: F, scopes = [Scope.preload, Scope.renderer]): void {
+  mayThrowError()
+  const { ipcMain } = Electron
+
   const { functions } = publicInfo
   const channel = IPCChannel.functionCall + name
 
@@ -171,11 +200,15 @@ export function publicFunction(name: string, func: PublicFunction, scopes = [Sco
  * Makes the function available for **renderer** and **preload** processes.
  *
  * _only for variables_
+ * 
  * @param name - name by which the variable will be accessed
  * @param value - variable getter/setter
  * @param scopes - variable scopes
  */
-export function publicVariable(name: string, value: PublicProperty, scopes = [Scope.renderer, Scope.preload]): void {
+export function publicVariable<T>(name: string, value: PublicProperty<T>, scopes = [Scope.renderer, Scope.preload]): void {
+  mayThrowError()
+  const { ipcMain } = Electron
+
   const { properties } = publicInfo
   const getChannel = IPCChannel.propertyGet + name
   const setChannel = IPCChannel.propertySet + name

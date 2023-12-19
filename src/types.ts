@@ -48,7 +48,7 @@ export interface IPublishMainEventArgs {
 export interface IPublishRendererEventArgs {
   name?: string
   scope?: Scope
-  receiver?: EventReceiver
+  procFn?: EventReceiver
 }
 
 export interface IPublishPropertyArgs {
@@ -71,12 +71,12 @@ export interface ICreateProviderArgs {
 export type Scopes = Map<string, Set<Scope>>
 export type Accesses = Map<string, Set<Access>>
 
-export type RendererEvent<T = undefined> = (handler: EventHandler<T>, isOnce?: boolean) => EventUnsubscriber
-export type MainEvent<T = undefined> = (handler: EventHandler<T>) => EventUnsubscriber
+export type RendererEvent<T = void> = (handler: EventHandler<T>, isOnce?: boolean) => EventUnsubscriber
+export type MainEvent<T = void> = (handler: EventHandler<T>) => EventUnsubscriber
 export type EventEmitter = (...args: any[]) => any
-export type EventReceiver<I = any, O = any> = (input: I) => O
+export type EventReceiver<I = void, O = I> = (input: I) => O
 export type EventUnsubscriber = () => void
-export type EventHandler<T> = (result: T) => void
+export type EventHandler<T = void> = (result: T) => void
 
 export interface IRendererPublic {
   __register__?(instance: any): void
@@ -95,9 +95,9 @@ export interface IProvider {
 
 export type PublicFunction = (...args: any[]) => any
 
-export type PublicProperty = {
-  get?(): any,
-  set?(value: any): void
+export type PublicProperty<T> = {
+  get?(): T,
+  set?(value: T): void
 }
 
 export interface IInfo {

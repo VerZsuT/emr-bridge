@@ -10,27 +10,26 @@ import { addAccess, addScope, publicFunction, publicMainEvent, publicRendererEve
 
 /**
  * Makes the method available for **renderer** and **preload** processes.
- *
- * _only for static_
  * 
+ * _only for static_  
  * _experimental decorators_
  */
 export function publicStaticMethod(): MethodDecorator
 /**
  * Makes the method available for **renderer** and **preload** processes.
- *
- * _only for static_
  * 
+ * _only for static_  
  * _experimental decorators_
+ * 
  * @param name - name by which the method will be accessed
  */
 export function publicStaticMethod(name: string): MethodDecorator
 /**
  * Makes the method available for **renderer** and **preload** processes.
- *
- * _only for static_
  * 
+ * _only for static_  
  * _experimental decorators_
+ * 
  * @param args - publish args
  */
 export function publicStaticMethod(args: IPublishMethodArgs): MethodDecorator
@@ -54,33 +53,29 @@ export function publicStaticMethod(arg?: string | IPublishMethodArgs): MethodDec
 
 /**
  * Makes the method available for **renderer** and **preload** processes.
- *
- * _only for non-static_
  * 
- * _experimental decorators_
- *
+ * _only for non-static_  
+ * _experimental decorators_  
  * _required `providePublic(classInstance)`_
  */
 export function publicMethod(): MethodDecorator
 /**
  * Makes the method available for **renderer** and **preload** processes.
- *
- * _only for non-static_
  * 
- * _experimental decorators_
- *
+ * _only for non-static_  
+ * _experimental decorators_  
  * _required `providePublic(classInstance)`_
+ * 
  * @param name - name by which the method will be accessed
  */
 export function publicMethod(name: string): MethodDecorator
 /**
  * Makes the method available for **renderer** and **preload** processes.
- *
- * _only for non-static_
- * 
- * _experimental decorators_
- *
+ *  
+ * _only for non-static_  
+ * _experimental decorators_  
  * _required `providePublic(classInstance)`_
+ * 
  * @param args - publish args
  */
 export function publicMethod(args: IPublishMethodArgs): MethodDecorator
@@ -98,32 +93,28 @@ export function publicMethod(arg?: string | IPublishMethodArgs): MethodDecorator
 /**
  * Makes the event available for **renderer** and **preload** processes.
  *
- * _only for non-static_
- * 
- * _experimental decorators_
- *
+ * _only for non-static_  
+ * _experimental decorators_  
  * _required `providePublic(classInstance)`_
  */
 export function publicClassMainEvent(): MethodDecorator
 /**
  * Makes the event available for **renderer** and **preload** processes.
  *
- * _only for non-static_
- * 
- * _experimental decorators_
- *
+ * _only for non-static_   
+ * _experimental decorators_  
  * _required `providePublic(classInstance)`_
+ * 
  * @param name - name by which the event will be accessed
  */
 export function publicClassMainEvent(name: string): MethodDecorator
 /**
  * Makes the event available for **renderer** and **preload** processes.
  *
- * _only for non-static_
- * 
- * _experimental decorators_
- *
+ * _only for non-static_   
+ * _experimental decorators_  
  * _required `providePublic(classInstance)`_
+ * 
  * @param args - publish args
  */
 export function publicClassMainEvent(args: IPublishMainEventArgs): MethodDecorator
@@ -153,35 +144,34 @@ export function publicClassMainEvent(arg?: string | IPublishMainEventArgs): Meth
 /**
  * Makes the event from **renderer** and **preload** available for **main** process.
  *
- * _only for non-static_
- * 
+ * _only for non-static_   
  * _experimental decorators_
  */
 export function publicClassRendererEvent(): PropertyDecorator
 /**
  * Makes the event from **renderer** and **preload** available for **main** process.
  *
- * _only for non-static_
- * 
+ * _only for non-static_  
  * _experimental decorators_
+ * 
  * @param name - name by which the event will be accessed
  */
 export function publicClassRendererEvent(name: string): PropertyDecorator
 /**
  * Makes the event from **renderer** and **preload** available for **main** process.
  *
- * _only for non-static_
- * 
+ * _only for non-static_  
  * _experimental decorators_
+ * 
  * @param receiver - linked receiver
  */
 export function publicClassRendererEvent(receiver: EventReceiver): PropertyDecorator
 /**
  * Makes the event from **renderer** and **preload** available for **main** process.
  *
- * _only for non-static_
- * 
+ * _only for non-static_  
  * _experimental decorators_
+ * 
  * @param name - name by which the event will be accessed
  * @param receiver - linked receiver
  */
@@ -189,18 +179,9 @@ export function publicClassRendererEvent(name: string, receiver: EventReceiver):
 /**
  * Makes the event from **renderer** and **preload** available for **main** process.
  *
- * _only for non-static_
- * 
+ * _only for non-static_  
  * _experimental decorators_
- * @param args - publish args
- */
-export function publicClassRendererEvent(args: IPublishRendererEventArgs): PropertyDecorator
-/**
- * Makes the event from **renderer** and **preload** available for **main** process.
- *
- * _only for non-static_
  * 
- * _experimental decorators_
  * @param args - publish args
  */
 export function publicClassRendererEvent(args: IPublishRendererEventArgs): PropertyDecorator
@@ -219,7 +200,7 @@ export function publicClassRendererEvent(arg?: string | EventReceiver | IPublish
         }
         else if (typeof arg === 'object') {
           name = arg.name ?? String(key)
-          receiver = arg.receiver ?? receiver
+          receiver = arg.procFn ?? receiver
           if (arg.scope) addScope(name, arg.scope)
         }
         else {
@@ -235,26 +216,25 @@ export function publicClassRendererEvent(arg?: string | EventReceiver | IPublish
 /**
  * Makes the property available for **renderer** and **preload** processes.
  *
- * _only for static_
- * 
+ * _only for static_  
  * _experimental decorators_
  */
 export function publicStaticProperty(): PropertyDecorator
 /**
  * Makes the property available for **renderer** and **preload** processes.
  *
- * _only for static_
- * 
+ * _only for static_  
  * _experimental decorators_
+ * 
  * @param name - name by which the property will be accessed
  */
 export function publicStaticProperty(name: string): PropertyDecorator
 /**
  * Makes the property available for **renderer** and **preload** processes.
  *
- * _only for static_
- * 
+ * _only for static_  
  * _experimental decorators_
+ * 
  * @param args - publish args
  */
 export function publicStaticProperty(args: IPublishPropertyArgs): PropertyDecorator
@@ -286,32 +266,28 @@ export function publicStaticProperty(arg?: string | IPublishPropertyArgs): Prope
 /**
  * Makes the property available for **renderer** and **preload** processes.
  *
- * _only for non-static_
- * 
- * _experimental decorators_
- *
+ * _only for non-static_  
+ * _experimental decorators_  
  * _required `providePublic(classInstance)`_
  */
 export function publicProperty(): PropertyDecorator
 /**
  * Makes the property available for **renderer** and **preload** processes.
  *
- * _only for non-static_
- * 
- * _experimental decorators_
- *
+ * _only for non-static_  
+ * _experimental decorators_  
  * _required `providePublic(classInstance)`_
+ * 
  * @param name - name by which the property will be accessed
  */
 export function publicProperty(name: string): PropertyDecorator
 /**
  * Makes the property available for **renderer** and **preload** processes.
  *
- * _only for non-static_
- * 
- * _experimental decorators_
- *
+ * _only for non-static_  
+ * _experimental decorators_  
  * _required `providePublic(classInstance)`_
+ * 
  * @param args - publish args
  */
 export function publicProperty(args: IPublishPropertyArgs): PropertyDecorator
