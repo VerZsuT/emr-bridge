@@ -1,5 +1,5 @@
 import type { WebContents } from 'electron'
-import Electron from 'electron'
+import electron from 'electron'
 
 import { Access, IPCChannel, Scope } from '../enums'
 import type {
@@ -23,11 +23,11 @@ const publicInfo: IInfo = {
 /** Выбрасывает ошибку если используется не в том процессе */
 let mayThrowError: () => void | never = () => { }
 
-if (typeof window !== 'undefined' || !Electron.ipcMain) {
+if (typeof window !== 'undefined' || !('ipcMain' in electron)) {
   mayThrowError = () => { throw new Error('Publish methods is available only in main process.') }
 }
 else {
-  Electron.ipcMain.on(IPCChannel.getPublicInfo, e => e.returnValue = publicInfo)
+  electron.ipcMain.on(IPCChannel.getPublicInfo, e => e.returnValue = publicInfo)
 }
 
 /**
@@ -44,7 +44,7 @@ export function publicMainEvent<
 >
   (name: string, procFn: ProcFn = <any>((...args: any[]) => args[0]), scopes = [Scope.preload, Scope.renderer]): (...args: Parameters<ProcFn>) => void {
   mayThrowError()
-  const { ipcMain } = Electron
+  const { ipcMain } = electron
 
   const { mainEvents } = publicInfo
   const mainEmitChannel = IPCChannel.mainEventEmit + name
@@ -115,7 +115,7 @@ export function publicRendererEvent<
   ProcFn extends (...args: any[]) => any = (v?: In) => Out
 >(name: string, procFn: ProcFn = <any>((v?: In) => v), scopes = [Scope.preload, Scope.renderer]): RendererEvent<Out> {
   mayThrowError()
-  const { ipcMain } = Electron
+  const { ipcMain } = electron
 
   if (name.startsWith('on')) {
     name = name.replace('on', '')
@@ -166,7 +166,7 @@ export function publicRendererEvent<
  */
 export function publicFunction<F extends PublicFunction>(name: string, func: F, scopes = [Scope.preload, Scope.renderer]): void {
   mayThrowError()
-  const { ipcMain } = Electron
+  const { ipcMain } = electron
 
   const { functions } = publicInfo
   const channel = IPCChannel.functionCall + name
@@ -207,7 +207,7 @@ export function publicFunction<F extends PublicFunction>(name: string, func: F, 
  */
 export function publicVariable<T>(name: string, value: PublicProperty<T>, scopes = [Scope.renderer, Scope.preload]): void {
   mayThrowError()
-  const { ipcMain } = Electron
+  const { ipcMain } = electron
 
   const { properties } = publicInfo
   const getChannel = IPCChannel.propertyGet + name

@@ -1,4 +1,4 @@
-import Electron from 'electron'
+import electron from 'electron'
 import { IPCChannel, Scope } from '../enums'
 import type { EventUnsubscriber, IIPCResult, IInfo, ITarget } from '../types'
 import createProvider from './provider'
@@ -20,7 +20,7 @@ let throwError: () => never
 if (typeof window !== 'undefined') {
   throwError = () => { throw new Error('"Main" is unavailable in renderer process. Use "Bridge" instead') }
 }
-else if (!Electron.ipcRenderer) {
+else if (!('ipcRenderer' in electron)) {
   throwError = () => { throw new Error('"Main" is unavailable in main process.') }
 }
 else {
@@ -29,7 +29,7 @@ else {
 
 /** Выполняется только в NodeJS */
 function initInNode() {
-  const { ipcRenderer } = Electron
+  const { ipcRenderer } = electron
 
   const info: IInfo | undefined = ipcRenderer.sendSync(IPCChannel.getPublicInfo)
   if (!info) throw new Error('Public methods from main is not provided. Call any publish methods to provide it from main process.')

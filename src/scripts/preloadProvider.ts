@@ -1,4 +1,4 @@
-import Electron from 'electron'
+import electron from 'electron'
 import { IPCChannel } from '../enums'
 import type { IIPCResult, IInfo, IProvider } from '../types'
 
@@ -8,7 +8,7 @@ let mayThrowError: () => void | never = () => { }
 if (typeof window === 'undefined') {
   mayThrowError = () => { throw new Error('"provideFromMain" is unavailable in main process.') }
 }
-else if (!Electron.contextBridge) {
+else if (!('contextBridge' in electron)) {
   mayThrowError = () => { throw new Error('"provideFromMain" is unavailable in renderer process.') }
 }
 
@@ -20,7 +20,7 @@ else if (!Electron.contextBridge) {
 function provideFromMain(contextIsolation = true): void {
   mayThrowError()
 
-  const { contextBridge, ipcRenderer } = Electron
+  const { contextBridge, ipcRenderer } = electron
   const info: IInfo = ipcRenderer.sendSync(IPCChannel.getPublicInfo)
 
   const provider: IProvider = {

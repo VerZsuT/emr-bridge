@@ -298,7 +298,7 @@ For _preload_, use **Main**
 
 ```ts
 // Preload process
-import { Main, provideFromMain } from 'emr-bridge'
+import { Main, provideFromMain } from 'emr-bridge/preload'
 
 provideFromMain()
 
@@ -319,7 +319,7 @@ For _renderer_, use **Bridge**
 
 ```ts
 // Renderer process
-import { Bridge } from 'emr-bridge'
+import { Bridge } from 'emr-bridge/renderer'
 
 interface IProvidedPublic {
   getUserName(): string
@@ -351,7 +351,7 @@ publicFunction('delay1s', () => {
 
 ```ts
 // Renderer process
-import { Bridge } from 'emr-bridge'
+import { Bridge } from 'emr-bridge/renderer'
 
 interface IPublic {
   delay1s(): Promise<void>
@@ -401,7 +401,7 @@ events.pay(200)
 
 ```ts
 // Renderer process
-import { Bridge, MainEvent } from 'emr-bridge'
+import { Bridge, MainEvent } from 'emr-bridge/renderer'
 
 interface IPublic {
   onTick: MainEvent<string>
@@ -445,7 +445,7 @@ events.onMessageWithReceiver(message => console.log(message))
 
 ```ts
 // Renderer process
-import { Bridge } from 'emr-bridge'
+import { Bridge } from 'emr-bridge/renderer'
 
 interface IPublic {
   message(message: string): void

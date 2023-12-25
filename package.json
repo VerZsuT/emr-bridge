@@ -1,6 +1,6 @@
 {
   "name": "emr-bridge",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "Allows you to easily give access to main methods from the renderer process",
   "main": "esm/index.js",
   "scripts": {
@@ -16,11 +16,23 @@
       ".": [
         "./esm/index.d.ts"
       ],
+      "renderer": [
+        "./esm/renderer.d.ts"
+      ],
+      "preload": [
+        "./esm/preload.d.ts"
+      ],
       "exp": [
         "./esm/exp.d.ts"
       ],
       "cjs": [
         "./cjs/index.d.ts"
+      ],
+      "cjs/renderer": [
+        "./cjs/renderer.d.ts"
+      ],
+      "cjs/preload": [
+        "./cjs/preload.d.ts"
       ],
       "cjs/exp": [
         "./cjs/exp.d.ts"
@@ -29,10 +41,14 @@
   },
   "exports": {
     ".": "./esm/index.js",
+    "./renderer": "./esm/renderer.js",
+    "./preload": "./esm/preload.js",
     "./exp": "./esm/exp.js",
     "./package.json": "./package.json",
     "./cjs": "./cjs/index.js",
-    "./cjs/exp": "./cjs/exp.js"
+    "./cjs/exp": "./cjs/exp.js",
+    "./cjs/renderer": "./cjs/renderer.js",
+    "./cjs/preload": "./cjs/preload.js"
   },
   "repository": {
     "type": "git",
