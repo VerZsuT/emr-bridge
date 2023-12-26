@@ -86,7 +86,7 @@ export function publicMainEvent<
           })
           .catch(reason => {
             filterSenders();
-            [...senders, ...sendersOnce].forEach(sender => sender.send(mainEmitChannel, { error: String(reason) } satisfies IIPCResult))
+            [...senders, ...sendersOnce].forEach(sender => sender.send(mainEmitChannel, { error: String(reason?.stack || reason) } satisfies IIPCResult))
             sendersOnce = []
           })
       }
@@ -95,8 +95,8 @@ export function publicMainEvent<
         sendersOnce = []
       }
     }
-    catch (error) {
-      allSenders.forEach(sender => sender.send(mainEmitChannel, { error: String(error) } satisfies IIPCResult))
+    catch (error: any) {
+      allSenders.forEach(sender => sender.send(mainEmitChannel, { error: String(error?.stack || error) } satisfies IIPCResult))
       sendersOnce = []
     }
   }
@@ -183,15 +183,15 @@ export function publicFunction<F extends PublicFunction>(name: string, func: F, 
         const promiseChannel = channel + IPCChannel.promisePostfix
         result
           .then(value => e.sender.send(promiseChannel, { value } satisfies IIPCResult))
-          .catch(reason => e.sender.send(promiseChannel, { error: String(reason) } satisfies IIPCResult))
+          .catch(reason => e.sender.send(promiseChannel, { error: String(reason?.stack || reason) } satisfies IIPCResult))
         e.returnValue = { promiseChannel } satisfies IIPCResult
       }
       else {
         e.returnValue = { value: result } satisfies IIPCResult
       }
     }
-    catch (error) {
-      e.returnValue = { error: String(error) } satisfies IIPCResult
+    catch (error: any) {
+      e.returnValue = { error: String(error?.stack || error) } satisfies IIPCResult
     }
   })
 }

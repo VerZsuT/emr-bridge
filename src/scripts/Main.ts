@@ -62,7 +62,7 @@ function initInNode() {
         ipcRenderer.sendSync(emitChannel, { promiseChannel } satisfies IIPCResult)
         arg
           .then(value => ipcRenderer.send(promiseChannel, { value } satisfies IIPCResult))
-          .catch(reason => ipcRenderer.send(promiseChannel, { error: String(reason) } satisfies IIPCResult))
+          .catch(reason => ipcRenderer.send(promiseChannel, { error: String(reason?.stack || reason) } satisfies IIPCResult))
       }
       else {
         ipcRenderer.send(emitChannel, { value: arg } satisfies IIPCResult)
