@@ -1,59 +1,66 @@
 import { Scope } from '../enums'
-import type { EventUnsubscriber, IIPCResult, ITarget } from '../types'
-import createProvider from './provider'
+import { GlobalProviderNotFoundError, TryUseBridgeInPreload } from '../errors'
+import type { EventHandler, EventUnsubscriber, IPCResult, Target } from '../types'
+import Provider from './provider'
 
 /**
  * Bridge between `renderer` and `main` processes.  
  * 
  * _only for renderer process_
  */
-let Bridge: ITarget = new Proxy({ as() { throwError() } }, {
-  get() { throwError() },
-  set() { throwError() },
-  apply() { throwError() }
+let Bridge: Target = new Proxy({ as: () => throwError() }, {
+  get: () => throwError(),
+  set: () => throwError(),
+  apply: () => throwError()
 })
+
+class ProviderIntoRenderer extends Provider {
+  #globalProvider = window.__provider__!
+
+  constructor() { super(); this.init() }
+
+  protected info = this.#globalProvider.getInfo()
+  protected scope = Scope.renderer
+
+  protected callFunction(name: string, secret: number, args: any[]): IPCResult {
+    return this.#globalProvider.provided.functions[name](secret, args)
+  }
+
+  protected getVariable(name: string): IPCResult {
+    return this.#globalProvider.provided.properties[name].get()
+  }
+
+  protected setVariable(name: string, value: any): IPCResult {
+    return this.#globalProvider.provided.properties[name].set(value)
+  }
+
+  protected waitPromise(channel: string, secret?: number | undefined) {
+    return new Promise<any>((resolve, reject) => {
+      this.#globalProvider.waitPromise(channel, resolve, reject, secret)
+    })
+  }
+
+  protected handleMainEvent(name: string, type: 'on' | 'once', handler: EventHandler<IPCResult>): EventUnsubscriber {
+    return this.#globalProvider.provided.mainEvents[name](type, handler)
+  }
+
+  protected emitRendererEvent(name: string, arg: any) {
+    this.#globalProvider.provided.rendererEvents[name](arg)
+  }
+}
 
 /** Выбрасывает ошибку если используется не в том процессе */
 let throwError: () => never
 
 if (typeof window === 'undefined') {
-  throwError = () => { throw new Error('"Bridge" is unavailable in main process. In preload use "Main" instead.') }
+  throwError = () => { throw new TryUseBridgeInPreload() }
 }
 else if (!window.__provider__) {
-  throwError = () => { throw new Error('Required methods not provided. Call "provideFromMain" in preload process.') }
+  throwError = () => { throw new GlobalProviderNotFoundError() }
 }
 else {
-  initInWeb()
-}
-
-/** Выполняется только в web */
-function initInWeb() {
-  const provider = window.__provider__!
-  const info = provider.getInfo()
-  Bridge = createProvider({
-    info, scope: Scope.renderer,
-    callFunction(name: string, ...args): IIPCResult {
-      return provider.provided.functions[name](...args)
-    },
-    emitRendererEvent(name, arg): void {
-      provider.provided.rendererEvents[name](arg)
-    },
-    handleMainEvent(name, type, handler): EventUnsubscriber {
-      return provider.provided.mainEvents[name](type, handler)
-    },
-    getVariable(name: string): IIPCResult {
-      return provider.provided.properties[name].get()
-    },
-    setVariable(name: string, value: any): IIPCResult | undefined {
-      provider.provided.properties[name].set(value)
-      return undefined
-    },
-    waitPromise(channel: string): Promise<any> {
-      return new Promise<any>((resolve, reject) => {
-        provider.waitPromise(channel, resolve, reject)
-      })
-    }
-  })
+  // Выполняется только в web
+  Bridge = new ProviderIntoRenderer()
 }
 
 export default Bridge

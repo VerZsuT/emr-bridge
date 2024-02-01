@@ -4,14 +4,15 @@ import electron from 'electron'
 import { Access, IPCChannel, Scope } from '../enums'
 import type {
   EventHandler,
-  IIPCResult,
-  IInfo,
+  IPCRequest,
+  IPCResult,
+  Info,
   PublicFunction,
   PublicProperty,
   RendererEvent
 } from '../types'
 
-const publicInfo: IInfo = {
+const publicInfo: Info = {
   properties: new Set(),
   functions: new Set(),
   mainEvents: new Set(),
@@ -41,11 +42,13 @@ export function publicMainEvent<
   In = void,
   Out = In extends Array<any> ? In[0] : In,
   ProcFn extends (...args: any[]) => any = In extends Array<any> ? (...args: In) => Out : (val: In) => Out
->
-  (name: string, procFn: ProcFn = <any>((...args: any[]) => args[0]), scopes = [Scope.preload, Scope.renderer]): (...args: Parameters<ProcFn>) => void {
+>(
+  name: string,
+  procFn: ProcFn = <any>((...args: any[]) => args[0]),
+  scopes = [Scope.preload, Scope.renderer]
+): (...args: Parameters<ProcFn>) => void {
   mayThrowError()
   const { ipcMain } = electron
-
   const { mainEvents } = publicInfo
   const mainEmitChannel = IPCChannel.mainEventEmit + name
   const mainHandleChannel = IPCChannel.mainEventOn + name
@@ -81,22 +84,22 @@ export function publicMainEvent<
         result
           .then(value => {
             filterSenders();
-            [...senders, ...sendersOnce].forEach(sender => sender.send(mainEmitChannel, { value } satisfies IIPCResult))
+            [...senders, ...sendersOnce].forEach(sender => sender.send(mainEmitChannel, { value } satisfies IPCResult))
             sendersOnce = []
           })
           .catch(reason => {
             filterSenders();
-            [...senders, ...sendersOnce].forEach(sender => sender.send(mainEmitChannel, { error: String(reason?.stack || reason) } satisfies IIPCResult))
+            [...senders, ...sendersOnce].forEach(sender => sender.send(mainEmitChannel, { error: String(reason?.stack || reason) } satisfies IPCResult))
             sendersOnce = []
           })
       }
       else {
-        allSenders.forEach(sender => sender.send(mainEmitChannel, { value: result } satisfies IIPCResult))
+        allSenders.forEach(sender => sender.send(mainEmitChannel, { value: result } satisfies IPCResult))
         sendersOnce = []
       }
     }
     catch (error: any) {
-      allSenders.forEach(sender => sender.send(mainEmitChannel, { error: String(error?.stack || error) } satisfies IIPCResult))
+      allSenders.forEach(sender => sender.send(mainEmitChannel, { error: String(error?.stack || error) } satisfies IPCResult))
       sendersOnce = []
     }
   }
@@ -113,7 +116,11 @@ export function publicRendererEvent<
   In = void,
   Out = In,
   ProcFn extends (...args: any[]) => any = (v?: In) => Out
->(name: string, procFn: ProcFn = <any>((v?: In) => v), scopes = [Scope.preload, Scope.renderer]): RendererEvent<Out> {
+>(
+  name: string,
+  procFn: ProcFn = <any>((v?: In) => v),
+  scopes = [Scope.preload, Scope.renderer]
+): RendererEvent<Out> {
   mayThrowError()
   const { ipcMain } = electron
 
@@ -129,15 +136,16 @@ export function publicRendererEvent<
   const handlersOnce = new Set<EventHandler<Out>>()
 
   rendererEvents.add(name)
-  if (!publicInfo.scopes.has(name))
+  if (!publicInfo.scopes.has(name)) {
     publicInfo.scopes.set(name, new Set(scopes))
+  }
 
   ipcMain.removeAllListeners(rendererEmitChannel)
 
-  ipcMain.on(rendererEmitChannel, (_, result: IIPCResult) => {
-    if (result.error) throw new Error(result.error)
+  ipcMain.on(rendererEmitChannel, (_, { error, value }: IPCResult) => {
+    if (error) throw new Error(error)
 
-    const converted = procFn(result.value)
+    const converted = procFn(value)
     handlers.forEach(handler => handler(converted))
     handlersOnce.forEach(handler => handler(converted))
     handlersOnce.clear()
@@ -167,31 +175,31 @@ export function publicRendererEvent<
 export function publicFunction<F extends PublicFunction>(name: string, func: F, scopes = [Scope.preload, Scope.renderer]): void {
   mayThrowError()
   const { ipcMain } = electron
-
   const { functions } = publicInfo
   const channel = IPCChannel.functionCall + name
 
   functions.add(name)
-  if (!publicInfo.scopes.has(name))
+  if (!publicInfo.scopes.has(name)) {
     publicInfo.scopes.set(name, new Set(scopes))
+  }
 
   ipcMain.removeAllListeners(channel)
-  ipcMain.on(channel, (e, ...args) => {
+  ipcMain.on(channel, (e, { args, secret }: IPCRequest) => {
     try {
       const result = func(...args)
       if (result instanceof Promise) {
         const promiseChannel = channel + IPCChannel.promisePostfix
         result
-          .then(value => e.sender.send(promiseChannel, { value } satisfies IIPCResult))
-          .catch(reason => e.sender.send(promiseChannel, { error: String(reason?.stack || reason) } satisfies IIPCResult))
-        e.returnValue = { promiseChannel } satisfies IIPCResult
+          .then(value => e.sender.send(promiseChannel, { value, secret } satisfies IPCResult))
+          .catch(reason => e.sender.send(promiseChannel, { error: String(reason?.stack || reason), secret } satisfies IPCResult))
+        e.returnValue = { promiseChannel } satisfies IPCResult
       }
       else {
-        e.returnValue = { value: result } satisfies IIPCResult
+        e.returnValue = { value: result } satisfies IPCResult
       }
     }
     catch (error: any) {
-      e.returnValue = { error: String(error?.stack || error) } satisfies IIPCResult
+      e.returnValue = { error: String(error?.stack || error) } satisfies IPCResult
     }
   })
 }
@@ -208,7 +216,6 @@ export function publicFunction<F extends PublicFunction>(name: string, func: F, 
 export function publicVariable<T>(name: string, value: PublicProperty<T>, scopes = [Scope.renderer, Scope.preload]): void {
   mayThrowError()
   const { ipcMain } = electron
-
   const { properties } = publicInfo
   const getChannel = IPCChannel.propertyGet + name
   const setChannel = IPCChannel.propertySet + name
@@ -216,8 +223,9 @@ export function publicVariable<T>(name: string, value: PublicProperty<T>, scopes
   const { get: getter, set: setter } = value
 
   properties.add(name)
-  if (!publicInfo.scopes.has(name))
+  if (!publicInfo.scopes.has(name)) {
     publicInfo.scopes.set(name, new Set(scopes))
+  }
 
   if (!publicInfo.accesses.has(name)) {
     const accesses: Access[] = []
@@ -233,26 +241,26 @@ export function publicVariable<T>(name: string, value: PublicProperty<T>, scopes
 
   if (getter) {
     ipcMain.removeAllListeners(getChannel)
-    ipcMain.on(getChannel, event => {
+    ipcMain.on(getChannel, (event) => {
       try {
         const result = getter()
-        event.returnValue = { value: result }
+        event.returnValue = { value: result } satisfies IPCResult
       }
-      catch (error) {
-        event.returnValue = { error }
+      catch (error: any) {
+        event.returnValue = { error: String(error?.stack || error) } satisfies IPCResult
       }
     })
   }
 
   if (setter) {
     ipcMain.removeAllListeners(setChannel)
-    ipcMain.on(setChannel, (event, ...args) => {
+    ipcMain.on(setChannel, (event, { args }: IPCRequest) => {
       try {
-        setter(args[0])
-        event.returnValue = { value: null }
+        setter(args.at(0))
+        event.returnValue = { value: null } satisfies IPCResult
       }
-      catch (error) {
-        event.returnValue = { error }
+      catch (error: any) {
+        event.returnValue = { error: String(error?.stack || error) } satisfies IPCResult
       }
     })
   }

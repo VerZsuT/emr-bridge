@@ -1,130 +1,136 @@
-import { Access } from '../enums'
-import type { EventUnsubscriber, ICreateProviderArgs, IIPCResult, ITarget } from '../types'
+import { Access, Scope } from '../enums'
+import { NoGetAccessError, NoSetAccessError, NotProvidedIntoScopeError, TrySetReadonlyError } from '../errors'
+import type { EventHandler, EventUnsubscriber, IPCResult, Info, Target } from '../types'
 
-function errorHandler(error: string, channel: string): void {
-  console.error(`Error on ${channel}.\n${error}`.replace('Error: ', ''))
-}
+export default abstract class Provider implements Target {
+  protected abstract info: Info
+  protected abstract scope: Scope
 
-function createProvider(args: ICreateProviderArgs): ITarget {
-  const { info, scope, getVariable, setVariable, callFunction, handleMainEvent, waitPromise, emitRendererEvent } = args
+  protected abstract getVariable(name: string): IPCResult
+  protected abstract setVariable(name: string, value: any): IPCResult
+  protected abstract callFunction(name: string, secret: number, args: any[]): IPCResult
+  protected abstract waitPromise(channel: string, secret?: number): Promise<any>
+  protected abstract emitRendererEvent(name: string, arg: any): void
+  protected abstract handleMainEvent(name: string, type: 'on' | 'once', handler: EventHandler<IPCResult>): EventUnsubscriber
 
-  const target: ITarget = {
-    as: <T>() => target as T
+  as<T>() { return this.target as T }
+
+  protected readonly target: any = {}
+
+  protected init() {
+    this.initFunctions()
+    this.initProperties()
+    this.initMainEvents()
+    this.initRendererEvents()
   }
 
-  function define(name: string, attrs?: { get?: () => any, set?: (v: any) => void, value?: any }): void {
+  protected errorHandler(error: string, channel: string): never {
+    throw new Error(`Error on ${channel}.\n${error}`.replace('Error: ', ''))
+  }
+
+  protected initFunctions() {
+    for (const name of this.info.functions) {
+      this.define(name, {
+        value: (...args: any[]): any => {
+          const secret = Math.random()
+          const { error, promiseChannel, value } = this.callFunction(name, secret, args)
+          if (error) {
+            this.errorHandler(error, name)
+          }
+  
+          if (promiseChannel) return this.waitPromise(promiseChannel, secret)
+          return value
+        }
+      })
+    }
+  }
+
+  protected initRendererEvents() {
+    for (const name of this.info.rendererEvents) {
+      this.define(name, {
+        value: (arg: any) => {
+          this.emitRendererEvent(name, arg)
+        }
+      })
+    }
+  }
+
+  protected initMainEvents() {
+    for (const name of this.info.mainEvents) {
+      const eventNameOn = `on${name[0].toUpperCase()}${name.slice(1)}`
+      const eventNameOnce = `once${name[0].toUpperCase()}${name.slice(1)}`
+
+      this.define(eventNameOn, {
+        value: (handler: (...args: any[]) => any): EventUnsubscriber => {
+          return this.handleMainEvent(name, 'on', ({ error, value }: IPCResult) => {
+            if (error) {
+              this.errorHandler(error, name)
+            }
+            handler(value)
+          })
+        }
+      })
+      this.define(eventNameOnce, {
+        value: (handler: (...args: any[]) => any): EventUnsubscriber => {
+          return this.handleMainEvent(name, 'once', ({ error, value }: IPCResult) => {
+            if (error) {
+              this.errorHandler(error, name)
+            }
+            handler(value)
+          })
+        }
+      })
+    }
+  }
+
+  protected initProperties() {
+    for (const name of this.info.properties) {
+      this.define(name, {
+        get: this.info.accesses.get(name)!.has(Access.get)
+          ? (): any => {
+            const { error, value } = this.getVariable(name)
+            if (error) {
+              this.errorHandler(error, name)
+            }
+            return value
+          }
+          : () => { throw new NoGetAccessError(name) },
+        set: this.info.accesses.get(name)!.has(Access.set)
+          ? (value: any): void => {
+            const { error } = this.setVariable(name, value)
+            if (error) {
+              this.errorHandler(error, name)
+            }
+          }
+          : () => { throw new NoSetAccessError(name) }
+      })
+    }
+  }
+
+  protected define(name: string, attrs?: { get?: () => any, set?: (v: any) => void, value?: any }) {
     let descriptor: PropertyDescriptor
 
-    if (!info.scopes.get(name)!.has(scope)) {
+    if (!this.info.scopes.get(name)!.has(this.scope)) {
       descriptor = {
-        get(): never { throw new Error(`'${name}' is not provided into ${scope} scope`) },
-        set(): never { throw new Error(`'${name}' is not provided into ${scope} scope`) }
+        get: () => { throw new NotProvidedIntoScopeError(name, this.scope) },
+        set: () => { throw new NotProvidedIntoScopeError(name, this.scope) }
       }
     }
     else if (attrs?.value) {
       descriptor = {
         get: () => attrs.value,
-        set: (): never => { throw new Error(`'${name}' is readonly`) },
+        set: () => { throw new TrySetReadonlyError(name) },
         enumerable: true
       }
     }
     else {
       descriptor = {
-        get: attrs?.get || ((): never => { throw new Error(`No access to getting '${name}'`) }),
-        set: attrs?.set || ((): never => { throw new Error(`'${name}' is readonly`) }),
+        get: attrs?.get || (() => { throw new NoSetAccessError(name) }),
+        set: attrs?.set || (() => { throw new TrySetReadonlyError(name) }),
         enumerable: true
       }
     }
 
-    Object.defineProperty(target, name, descriptor)
+    Object.defineProperty(this.target, name, descriptor)
   }
-
-  info.functions.forEach(funcName => {
-    define(funcName, {
-      value(...args: any[]): any {
-        const result = callFunction(funcName, ...args)
-        if (result.error) {
-          errorHandler(result.error, funcName)
-          return
-        }
-
-        if (result.promiseChannel)
-          return waitPromise(result.promiseChannel)
-
-        return result.value
-      }
-    })
-  })
-
-  info.rendererEvents.forEach(eventName => {
-    define(eventName, {
-      value(arg: any): void {
-        emitRendererEvent(eventName, arg)
-      }
-    })
-  })
-
-  info.mainEvents.forEach(mainEventName => {
-    const eventNameOn = `on${mainEventName[0].toUpperCase()}${mainEventName.slice(1)}`
-    const eventNameOnce = `once${mainEventName[0].toUpperCase()}${mainEventName.slice(1)}`
-
-    define(eventNameOn, {
-      value(handler: (...args: any[]) => any): EventUnsubscriber {
-        return handleMainEvent(mainEventName, 'on', (result: IIPCResult) => {
-          if (result.error) {
-            errorHandler(result.error, mainEventName)
-            return
-          }
-
-          if (result.promiseChannel)
-            waitPromise(result.promiseChannel).then(handler)
-
-          handler(result.value)
-        })
-      }
-    })
-    define(eventNameOnce, {
-      value(handler: (...args: any[]) => any): EventUnsubscriber {
-        return handleMainEvent(mainEventName, 'once', (result: IIPCResult) => {
-          if (result.error) {
-            errorHandler(result.error, mainEventName)
-            return
-          }
-
-          if (result.promiseChannel)
-            waitPromise(result.promiseChannel).then(handler)
-
-          handler(result.value)
-        })
-      }
-    })
-  })
-
-  info.properties.forEach(propName => {
-    define(propName, {
-      get: info.accesses.get(propName)!.has(Access.get)
-        ? (): any => {
-          const result = getVariable(propName)
-          if (result.error) {
-            errorHandler(result.error, propName)
-            return
-          }
-          return result.value
-        }
-        : (): never => { throw new Error(`No access to getting the '${propName}' property`) },
-      set: info.accesses.get(propName)!.has(Access.set)
-        ? (value: any): void => {
-          const result = setVariable(propName, value)
-          if (result?.error) {
-            errorHandler(result.error, propName)
-            return
-          }
-        }
-        : (): never => { throw new Error(`No access to setting the '${propName}' property`) }
-    })
-  })
-
-  return target
 }
-
-export default createProvider

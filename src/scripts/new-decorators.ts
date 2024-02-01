@@ -4,11 +4,11 @@ import type {
   ClassPropertyDecorator,
   ClassSetterDecorator,
   EventReceiver,
-  IPublishMainEventArgs,
-  IPublishMethodArgs,
-  IPublishPropertyArgs,
-  IPublishRendererEventArgs,
   PublishGetterArgs,
+  PublishMainEventArgs,
+  PublishMethodArgs,
+  PublishPropertyArgs,
+  PublishRendererEventArgs,
   PublishSetterArgs
 } from '../types'
 import { addAccess, addScope, publicFunction, publicMainEvent, publicRendererEvent, publicVariable } from './publish'
@@ -34,8 +34,8 @@ export function publicMethod(name: string): ClassMethodDecorator
  * 
  * @param args - publish args
  */
-export function publicMethod(args: IPublishMethodArgs): ClassMethodDecorator
-export function publicMethod(arg?: string | IPublishMethodArgs): ClassMethodDecorator {
+export function publicMethod(args: PublishMethodArgs): ClassMethodDecorator
+export function publicMethod(arg?: string | PublishMethodArgs): ClassMethodDecorator {
   return <This, Args extends any[], Return>(
     method: (this: This, ...args: Args) => Return,
     context: ClassMethodDecoratorContext<This, (this: This, ...args: Args) => Return>
@@ -79,8 +79,8 @@ export function publicClassMainEvent(name: string): ClassMethodDecorator
  * 
  * @param args - publish args
  */
-export function publicClassMainEvent(args: IPublishMainEventArgs): ClassMethodDecorator
-export function publicClassMainEvent(arg?: string | IPublishMainEventArgs): ClassMethodDecorator {
+export function publicClassMainEvent(args: PublishMainEventArgs): ClassMethodDecorator
+export function publicClassMainEvent(arg?: string | PublishMainEventArgs): ClassMethodDecorator {
   return <This, Args extends any[], Return>(
     method: (this: This, ...args: Args) => Return,
     context: ClassMethodDecoratorContext<This, (this: This, ...args: Args) => Return>
@@ -142,8 +142,8 @@ export function publicClassRendererEvent(name: string, receiver: EventReceiver):
  * 
  * @param args - publish args
  */
-export function publicClassRendererEvent(args: IPublishRendererEventArgs): ClassPropertyDecorator
-export function publicClassRendererEvent(arg?: string | EventReceiver | IPublishRendererEventArgs): ClassPropertyDecorator {
+export function publicClassRendererEvent(args: PublishRendererEventArgs): ClassPropertyDecorator
+export function publicClassRendererEvent(arg?: string | EventReceiver | PublishRendererEventArgs): ClassPropertyDecorator {
   return <This, Type>(
     _: undefined,
     context: ClassFieldDecoratorContext<This, Type>
@@ -193,8 +193,8 @@ export function publicProperty(name: string): ClassPropertyDecorator
  * 
  * @param args - publish args
  */
-export function publicProperty(args: IPublishPropertyArgs): ClassPropertyDecorator
-export function publicProperty(arg?: string | IPublishPropertyArgs): ClassPropertyDecorator {
+export function publicProperty(args: PublishPropertyArgs): ClassPropertyDecorator
+export function publicProperty(arg?: string | PublishPropertyArgs): ClassPropertyDecorator {
   return <This, Type>(
     _: undefined,
     context: ClassFieldDecoratorContext<This, Type>

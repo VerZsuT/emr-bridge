@@ -1,90 +1,79 @@
 import electron from 'electron'
 import { IPCChannel, Scope } from '../enums'
-import type { EventUnsubscriber, IIPCResult, IInfo, ITarget } from '../types'
-import createProvider from './provider'
+import { NotProvidedFromMain, TryUseMainInMain, TryUseMainInRenderer } from '../errors'
+import type { EventHandler, EventUnsubscriber, IPCResult, Target } from '../types'
+import Provider from './provider'
+import IPCTunnel from './renderer-tunnels'
 
 /**
  * Bridge between `preload` and `main` processes.
  *   
  * _only for preload process_
  */
-let Main: ITarget = new Proxy({ as() { throwError() } }, {
+let Main: Target = new Proxy({ as() { throwError() } }, {
   get() { throwError() },
   set() { throwError() },
   apply() { throwError() }
 })
 
+class ProviderIntoPreload extends Provider {
+  #ipcRenderer = electron.ipcRenderer
+
+  protected info = this.#ipcRenderer.sendSync(IPCChannel.getPublicInfo)
+  protected scope = Scope.preload
+
+  constructor() {
+    super(); if (!this.info) throw new NotProvidedFromMain()
+  }
+
+  protected callFunction(name: string, secret: number, args: any[]): IPCResult {
+    return new IPCTunnel.Function(name).call({ args, secret })
+  }
+
+  protected getVariable(name: string): IPCResult {
+    return new IPCTunnel.Property(name).get()
+  }
+
+  protected setVariable(name: string, value: any): IPCResult {
+    return new IPCTunnel.Property(name).set(value)
+  }
+
+  protected async waitPromise(channel: string, secret?: number | undefined): Promise<any> {
+    return await new IPCTunnel.Promise(channel).wait(secret)
+  }
+
+  protected handleMainEvent(name: string, type: 'on' | 'once', handler: EventHandler<IPCResult>): EventUnsubscriber {
+    const tunnel = new IPCTunnel.MainEvent(name)
+
+    if (type === 'on') return tunnel.on(handler)
+    else return tunnel.once(handler)
+  }
+
+  protected emitRendererEvent(name: string, arg: any): void {
+    const tunnel = new IPCTunnel.RendererEvent(name)
+
+    if (arg instanceof Promise) {
+      arg.then(value => tunnel.emit(value))
+        .catch(reason => tunnel.error(String(reason)))
+    }
+    else {
+      tunnel.emit(arg)
+    }
+  }
+}
+
 /** Выбрасывает ошибку если используется не в том процессе */
 let throwError: () => never
 
 if (typeof window !== 'undefined') {
-  throwError = () => { throw new Error('"Main" is unavailable in renderer process. Use "Bridge" instead') }
+  throwError = () => { throw new TryUseMainInRenderer() }
 }
 else if (!('ipcRenderer' in electron)) {
-  throwError = () => { throw new Error('"Main" is unavailable in main process.') }
+  throwError = () => { throw new TryUseMainInMain() }
 }
 else {
-  initInNode()
-}
-
-/** Выполняется только в NodeJS */
-function initInNode() {
-  const { ipcRenderer } = electron
-
-  const info: IInfo | undefined = ipcRenderer.sendSync(IPCChannel.getPublicInfo)
-  if (!info) throw new Error('Public methods from main is not provided. Call any publish methods to provide it from main process.')
-
-  Main = createProvider({
-    info, scope: Scope.preload,
-    callFunction(name: string, ...args): IIPCResult {
-      return ipcRenderer.sendSync(IPCChannel.functionCall + name, ...args)
-    },
-    handleMainEvent(name, type, handler): EventUnsubscriber {
-      const listener = (_: any, result: IIPCResult) => handler(result)
-      const emitChannel = IPCChannel.mainEventEmit + name
-
-      if (type === 'on') {
-        ipcRenderer.send(IPCChannel.mainEventOn + name)
-        ipcRenderer.on(emitChannel, listener)
-      }
-      else {
-        ipcRenderer.send(IPCChannel.mainEventOnce + name)
-        ipcRenderer.once(emitChannel, listener)
-      }
-
-      return () => ipcRenderer.removeListener(emitChannel, listener)
-    },
-    emitRendererEvent(name, arg): void {
-      const emitChannel = IPCChannel.rendererEventEmit + name
-
-      if (arg instanceof Promise) {
-        const promiseChannel = emitChannel + IPCChannel.promisePostfix
-        ipcRenderer.sendSync(emitChannel, { promiseChannel } satisfies IIPCResult)
-        arg
-          .then(value => ipcRenderer.send(promiseChannel, { value } satisfies IIPCResult))
-          .catch(reason => ipcRenderer.send(promiseChannel, { error: String(reason?.stack || reason) } satisfies IIPCResult))
-      }
-      else {
-        ipcRenderer.send(emitChannel, { value: arg } satisfies IIPCResult)
-      }
-    },
-    getVariable(name: string): IIPCResult {
-      return ipcRenderer.sendSync(IPCChannel.propertyGet + name)
-    },
-    setVariable(name: string, value: any): IIPCResult | undefined {
-      return ipcRenderer.sendSync(IPCChannel.propertySet + name, value)
-    },
-    waitPromise(channel: string): Promise<any> {
-      return new Promise<any>((resolve, reject) => {
-        ipcRenderer.once(channel, (_, result: IIPCResult) => {
-          if (result.error)
-            reject(result.error)
-          else
-            resolve(result.value)
-        })
-      })
-    }
-  })
+  // Выполняется только в NodeJS
+  Main = new ProviderIntoPreload()
 }
 
 export default Main

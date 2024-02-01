@@ -1,2 +1,3 @@
-export { default as Bridge } from './scripts/Bridge'
-export type { EventEmitter, EventHandler, EventReceiver, EventUnsubscriber, IPublishMainEventArgs, IPublishMethodArgs, IPublishPropertyArgs, IPublishRendererEventArgs, MainEvent, PublicFunction, PublicProperty, RendererEvent } from './types'
+export { default as Bridge } from './scripts/bridge'
+export type { EventEmitter, EventHandler, EventReceiver, EventUnsubscriber, MainEvent, PublicFunction, PublicProperty, PublishMainEventArgs, PublishMethodArgs, PublishPropertyArgs, PublishRendererEventArgs, RendererEvent } from './types'
+

@@ -1,10 +1,10 @@
 import type {
   EventReceiver,
-  IPublishMainEventArgs,
-  IPublishMethodArgs,
-  IPublishPropertyArgs,
-  IPublishRendererEventArgs,
-  IRendererPublic
+  PublishMainEventArgs,
+  PublishMethodArgs,
+  PublishPropertyArgs,
+  PublishRendererEventArgs,
+  RendererPublic
 } from '../types'
 import { addAccess, addScope, publicFunction, publicMainEvent, publicRendererEvent, publicVariable } from './publish'
 
@@ -32,8 +32,8 @@ export function publicStaticMethod(name: string): MethodDecorator
  * 
  * @param args - publish args
  */
-export function publicStaticMethod(args: IPublishMethodArgs): MethodDecorator
-export function publicStaticMethod(arg?: string | IPublishMethodArgs): MethodDecorator {
+export function publicStaticMethod(args: PublishMethodArgs): MethodDecorator
+export function publicStaticMethod(arg?: string | PublishMethodArgs): MethodDecorator {
   return (target: any, key: string | symbol) => {
     let name = String(key)
 
@@ -78,10 +78,10 @@ export function publicMethod(name: string): MethodDecorator
  * 
  * @param args - publish args
  */
-export function publicMethod(args: IPublishMethodArgs): MethodDecorator
-export function publicMethod(arg?: string | IPublishMethodArgs): MethodDecorator {
+export function publicMethod(args: PublishMethodArgs): MethodDecorator
+export function publicMethod(arg?: string | PublishMethodArgs): MethodDecorator {
   return (tgt: any, key: string | symbol, _) => {
-    const target: IRendererPublic = tgt
+    const target: RendererPublic = tgt
     const prevRegister = target.__register__ ?? (() => { })
     target.__register__ = instance => {
       prevRegister(instance)
@@ -117,10 +117,10 @@ export function publicClassMainEvent(name: string): MethodDecorator
  * 
  * @param args - publish args
  */
-export function publicClassMainEvent(args: IPublishMainEventArgs): MethodDecorator
-export function publicClassMainEvent(arg?: string | IPublishMainEventArgs): MethodDecorator {
+export function publicClassMainEvent(args: PublishMainEventArgs): MethodDecorator
+export function publicClassMainEvent(arg?: string | PublishMainEventArgs): MethodDecorator {
   return (tgt: any, key: string | symbol, _) => {
-    const target: IRendererPublic = tgt
+    const target: RendererPublic = tgt
     const prevRegister = target.__register__ ?? (() => { })
     target.__register__ = instance => {
       prevRegister(instance)
@@ -184,10 +184,10 @@ export function publicClassRendererEvent(name: string, receiver: EventReceiver):
  * 
  * @param args - publish args
  */
-export function publicClassRendererEvent(args: IPublishRendererEventArgs): PropertyDecorator
-export function publicClassRendererEvent(arg?: string | EventReceiver | IPublishRendererEventArgs): PropertyDecorator {
+export function publicClassRendererEvent(args: PublishRendererEventArgs): PropertyDecorator
+export function publicClassRendererEvent(arg?: string | EventReceiver | PublishRendererEventArgs): PropertyDecorator {
   return (tgt: any, key: string | symbol) => {
-    const target: IRendererPublic = tgt
+    const target: RendererPublic = tgt
     const prevRegister = target.__register__ ?? (() => { })
     target.__register__ = instance => {
       prevRegister(instance)
@@ -237,8 +237,8 @@ export function publicStaticProperty(name: string): PropertyDecorator
  * 
  * @param args - publish args
  */
-export function publicStaticProperty(args: IPublishPropertyArgs): PropertyDecorator
-export function publicStaticProperty(arg?: string | IPublishPropertyArgs): PropertyDecorator {
+export function publicStaticProperty(args: PublishPropertyArgs): PropertyDecorator
+export function publicStaticProperty(arg?: string | PublishPropertyArgs): PropertyDecorator {
   return (target: any, key: string | symbol) => {
     let name = String(key)
     if (arg) {
@@ -290,10 +290,10 @@ export function publicProperty(name: string): PropertyDecorator
  * 
  * @param args - publish args
  */
-export function publicProperty(args: IPublishPropertyArgs): PropertyDecorator
-export function publicProperty(arg?: string | IPublishPropertyArgs): PropertyDecorator {
+export function publicProperty(args: PublishPropertyArgs): PropertyDecorator
+export function publicProperty(arg?: string | PublishPropertyArgs): PropertyDecorator {
   return (tgt: any, key: string | symbol) => {
-    const target: IRendererPublic = tgt
+    const target: RendererPublic = tgt
     const prevRegister = target.__register__ ?? (() => { })
     target.__register__ = instance => {
       prevRegister(instance)
@@ -308,7 +308,7 @@ export function publicProperty(arg?: string | IPublishPropertyArgs): PropertyDec
  * _only for class instance_
  */
 export function providePublic<InstanceType>(instance: InstanceType): InstanceType {
-  const target = instance as IRendererPublic
+  const target = instance as RendererPublic
   if (!target.__register__)
     throw new Error('Public methods not defined')
 
