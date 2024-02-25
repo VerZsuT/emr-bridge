@@ -1,4 +1,4 @@
-import { Scope } from './enums'
+import { Scope } from './enums.js'
 
 export class NoSetAccessError extends Error {
   constructor(name: string) { super(`No access to setting '${name}'`) }

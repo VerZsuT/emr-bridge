@@ -1,6 +1,6 @@
-import { Access, Scope } from '../enums'
-import { NoGetAccessError, NoSetAccessError, NotProvidedIntoScopeError, TrySetReadonlyError } from '../errors'
-import type { EventHandler, EventUnsubscriber, IPCResult, Info, Target } from '../types'
+import { Access, Scope } from '../enums.js'
+import { NoGetAccessError, NoSetAccessError, NotProvidedIntoScopeError, TrySetReadonlyError } from '../errors.js'
+import type { EventHandler, EventUnsubscriber, IPCResult, Info, Target } from '../types.js'
 
 export default abstract class Provider implements Target {
   protected abstract info: Info

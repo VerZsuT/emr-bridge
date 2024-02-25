@@ -1,7 +1,7 @@
-import { Scope } from '../enums'
-import { GlobalProviderNotFoundError, TryUseBridgeInPreload } from '../errors'
-import type { EventHandler, EventUnsubscriber, IPCResult, Target } from '../types'
-import Provider from './provider'
+import { Scope } from '../enums.js'
+import { GlobalProviderNotFoundError, TryUseBridgeInPreload } from '../errors.js'
+import type { EventHandler, EventUnsubscriber, IPCResult, Target } from '../types.js'
+import Provider from './provider.js'
 
 /**
  * Bridge between `renderer` and `main` processes.  

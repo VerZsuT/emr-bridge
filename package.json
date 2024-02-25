@@ -1,8 +1,9 @@
 {
   "name": "emr-bridge",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "Allows you to easily give access to main methods from the renderer process",
   "main": "esm/index.js",
+  "type": "module",
   "scripts": {
     "compile": "tsc --project ./tsconfig.json && tsc --project ./tsconfig.cjs.json"
   },

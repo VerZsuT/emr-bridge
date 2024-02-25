@@ -1,7 +1,7 @@
 import electron from 'electron'
-import { IPCChannel } from '../enums'
-import type { GlobalProvider, IPCResult, Info } from '../types'
-import IPCTunnel from './renderer-tunnels'
+import { IPCChannel } from '../enums.js'
+import type { GlobalProvider, IPCResult, Info } from '../types.js'
+import IPCTunnel from './renderer-tunnels.js'
 
 /** Выбрасывает ошибку если используется не в том процессе */
 let mayThrowError: () => void | never = () => {}

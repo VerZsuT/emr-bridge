@@ -1,7 +1,7 @@
 import type { WebContents } from 'electron'
 import electron from 'electron'
 
-import { Access, IPCChannel, Scope } from '../enums'
+import { Access, IPCChannel, Scope } from '../enums.js'
 import type {
   EventHandler,
   IPCRequest,
@@ -10,7 +10,7 @@ import type {
   PublicFunction,
   PublicProperty,
   RendererEvent
-} from '../types'
+} from '../types.js'
 
 const publicInfo: Info = {
   properties: new Set(),

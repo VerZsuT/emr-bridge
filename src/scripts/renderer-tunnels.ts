@@ -1,7 +1,7 @@
 import type { IpcRendererEvent } from 'electron'
 import electron from 'electron'
-import { IPCChannel } from '../enums'
-import type { EventHandler, EventUnsubscriber, IPCRequest, IPCResult } from '../types'
+import { IPCChannel } from '../enums.js'
+import type { EventHandler, EventUnsubscriber, IPCRequest, IPCResult } from '../types.js'
 
 class FunctionTunnel {
   readonly #tunnel: IPCTunnel

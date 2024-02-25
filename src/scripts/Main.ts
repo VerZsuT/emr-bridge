@@ -1,9 +1,9 @@
 import electron from 'electron'
-import { IPCChannel, Scope } from '../enums'
-import { NotProvidedFromMain, TryUseMainInMain, TryUseMainInRenderer } from '../errors'
-import type { EventHandler, EventUnsubscriber, IPCResult, Target } from '../types'
-import Provider from './provider'
-import IPCTunnel from './renderer-tunnels'
+import { IPCChannel, Scope } from '../enums.js'
+import { NotProvidedFromMain, TryUseMainInMain, TryUseMainInRenderer } from '../errors.js'
+import type { EventHandler, EventUnsubscriber, IPCResult, Target } from '../types.js'
+import Provider from './provider.js'
+import IPCTunnel from './renderer-tunnels.js'
 
 /**
  * Bridge between `preload` and `main` processes.

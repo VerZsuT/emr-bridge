@@ -10,8 +10,8 @@ import type {
   PublishPropertyArgs,
   PublishRendererEventArgs,
   PublishSetterArgs
-} from '../types'
-import { addAccess, addScope, publicFunction, publicMainEvent, publicRendererEvent, publicVariable } from './publish'
+} from '../types.js'
+import { addAccess, addScope, publicFunction, publicMainEvent, publicRendererEvent, publicVariable } from './publish.js'
 
 /**
  * Makes the method available for **renderer** and **preload** processes.
