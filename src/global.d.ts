@@ -1,3 +1,6 @@
 declare interface Window {
-  __provider__?: import('./types').GlobalProvider
+    /**
+     * Провайдер обязательных методов.
+     */
+    __provider__?: import('./types').IGlobalProvider
 }

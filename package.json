@@ -1,55 +1,37 @@
 {
   "name": "emr-bridge",
-  "version": "1.7.1",
+  "version": "2.0.0",
   "description": "Allows you to easily give access to main methods from the renderer process",
-  "main": "esm/index.js",
+  "main": "esm/entries/index.js",
   "type": "module",
   "scripts": {
-    "compile": "tsc --project ./tsconfig.json && tsc --project ./tsconfig.cjs.json"
+    "compile": "tsc --project ./tsconfig.json && tsc --project ./tsconfig.cjs.json",
+    "pack": "npm run compile && npm pack"
   },
-  "types": "esm/index.d.ts",
-  "files": [
-    "esm",
-    "cjs"
-  ],
+  "types": "esm/entries/index.d.ts",
+  "files": [ "esm", "cjs"],
   "typesVersions": {
     "*": {
-      ".": [
-        "./esm/index.d.ts"
-      ],
-      "renderer": [
-        "./esm/renderer.d.ts"
-      ],
-      "preload": [
-        "./esm/preload.d.ts"
-      ],
-      "exp": [
-        "./esm/exp.d.ts"
-      ],
-      "cjs": [
-        "./cjs/index.d.ts"
-      ],
-      "cjs/renderer": [
-        "./cjs/renderer.d.ts"
-      ],
-      "cjs/preload": [
-        "./cjs/preload.d.ts"
-      ],
-      "cjs/exp": [
-        "./cjs/exp.d.ts"
-      ]
+      ".": ["./esm/entries/index.d.ts"],
+      "./cjs": ["./cjs/entries/index.d.ts"],
+      "./main": ["./esm/entries/main.d.ts"],
+      "./renderer": ["./esm/entries/renderer.d.ts"],
+      "./preload": ["./esm/entries/preload.d.ts"],
+      "./cjs/main": ["./cjs/entries/main.d.ts"],
+      "./cjs/renderer": ["./cjs/entries/renderer.d.ts"],
+      "./cjs/preload": ["./cjs/entries/preload.d.ts"]
     }
   },
   "exports": {
-    ".": "./esm/index.js",
-    "./renderer": "./esm/renderer.js",
-    "./preload": "./esm/preload.js",
-    "./exp": "./esm/exp.js",
+    ".": "./esm/entries/index.js",
+    "./cjs": "./cjs/entries/index.js",
     "./package.json": "./package.json",
-    "./cjs": "./cjs/index.js",
-    "./cjs/exp": "./cjs/exp.js",
-    "./cjs/renderer": "./cjs/renderer.js",
-    "./cjs/preload": "./cjs/preload.js"
+    "./main": "./esm/entries/main.js",
+    "./renderer": "./esm/entries/renderer.js",
+    "./preload": "./esm/entries/preload.js",
+    "./cjs/main": "./cjs/entries/main.js",
+    "./cjs/renderer": "./cjs/entries/renderer.js",
+    "./cjs/preload": "./cjs/entries/preload.js"
   },
   "repository": {
     "type": "git",
@@ -65,6 +47,6 @@
     "electron": ">=20.0.0"
   },
   "devDependencies": {
-    "typescript": "^5.3.3"
+    "typescript": "^5.5.3"
   }
 }

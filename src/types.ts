@@ -1,102 +1,226 @@
-import type { Scope } from './enums'
-import { Access } from './enums'
+/**
+ * Мост до main.
+ */
+export interface IBridge {
+    /**
+     * Вернуть в качестве типа.
+     */
+    as<TTarget>(): IBridge & TTarget
 
-export interface Target {
-  as<T>(): T
+    /**
+     * Вызвать событие.
+     * @param name - Имя события.
+     * @param value - Передаваемое значение.
+     */
+    emit<TValue = unknown>(name: string, value?: TValue): void
+
+    /**
+     * Добавить обработчик события.
+     * @param name - Имя события.
+     * @param listener - Обработчик.
+     * @returns Функция отписки от события.
+     */
+    on<TValue>(name: string, listener: EventListener<TValue>): EventUnsubscribe
+
+    /**
+     * Добавить одноразовый обработчик события.
+     * @param name - Имя события.
+     * @param listener - Обработчик.
+     * @returns Функция отписки от события.
+     */
+    once<TValue>(name: string, listener: EventListener<TValue>): EventUnsubscribe
+
+    /**
+     * Вызвать функцию, возвращающую объект, не передаваемый стандартным путём.
+     * @param func - Вызываемая функция.
+     * @param Class - Класс, экземпляр которого будет возвращён функцией.
+     * @param args - Аргументы вызова функции.
+     * @returns Возвращённое функцией значение (преобразованное из снимка).
+     */
+    call<
+        TFunc extends (...args: any[]) => InstanceType<TClass>,
+        TClass extends { new(): IHasSnapshot }
+    >(func: TFunc, Class: TClass, args: Parameters<TFunc>): InstanceType<TClass>
+
+    /**
+     * Обернуть функцию, возвращающую экземпляр класса.
+     * @param func - Оригинальная функция.
+     * @param Class - Класс.
+     */
+    returns<
+        TFunc extends (...args: any[]) => InstanceType<TClass>,
+        TClass extends { new(): IHasSnapshot }
+    >(func: TFunc, Class: TClass): TFunc
 }
 
-export type ClassMethodDecorator = <This, Args extends any[], Return>(
-  method: (this: This, ...args: Args) => Return,
-  context: ClassMethodDecoratorContext<This, (this: This, ...args: Args) => Return>
-) => void
+/**
+ * Работает со снимками.
+ */
+export interface IHasSnapshot<TSnapshot = unknown> {
+    /**
+     * Получить снимок.
+     * @returns Снимок.
+     */
+    takeSnapshot(): TSnapshot
 
-export type ClassPropertyDecorator = <This, Value>(
-  target: undefined,
-  context: ClassFieldDecoratorContext<This, Value>
-) => void
-
-export type ClassGetterDecorator = <This, Value>(
-  getter: () => Value,
-  context: ClassGetterDecoratorContext<This, Value>
-) => void
-
-export type ClassSetterDecorator = <This, Value>(
-  setter: (value: Value) => void,
-  context: ClassSetterDecoratorContext<This, Value>
-) => void
-
-export type PublishSetterArgs = Omit<PublishPropertyArgs, 'access'>
-
-export type PublishGetterArgs = Omit<PublishPropertyArgs, 'access'>
-
-export interface IPCResult {
-  value?: any
-  error?: string
-  promiseChannel?: string
-  secret?: number
+    /**
+     * Обновить из снимка.
+     * @param snapshot - Снимок.
+     */
+    updateFromSnapshot(snapshot: TSnapshot): void
 }
 
-export interface IPCRequest {
-  args: any[]
-  secret?: number
+/**
+ * Значение-снимок, передаваемое по IPC.
+ */
+export interface ISnapshotValue<TSnapshot = unknown> {
+    /**
+     * Тип значения.
+     */
+    __type__: 'snapshot',
+
+    /**
+     * Снимок.
+     */
+    __snapshot__: TSnapshot
 }
 
-export interface PublishMethodArgs {
-  name?: string
-  scope?: Scope
+/**
+ * Передаваемый по IPC результат.
+ */
+export interface IResult<TValue = any> {
+    /**
+     * Значение.
+     */
+    value?: TValue
+
+    /**
+     * Ошибка.
+     */
+    error?: string
+
+    /**
+     * Канал обработки обещания.
+     */
+    promiseChannel?: string
+
+    /**
+     * Уникальный идентификатор.
+     */
+    id?: string
 }
 
-export interface PublishMainEventArgs {
-  name?: string
-  scope?: Scope
+/**
+ * Передаваемый по IPC запрос.
+ */
+export interface IRequest {
+    /**
+     * Аргументы.
+     */
+    args: any[]
+
+    /**
+     * Уникальный идентификатор.
+     */
+    id?: string
 }
 
-export interface PublishRendererEventArgs {
-  name?: string
-  scope?: Scope
-  procFn?: EventReceiver
+/**
+ * Класс объекта, умеющего работать со снимками.
+ */
+export type HasSnapshotClass<TValue = unknown> = { new(): IHasSnapshot<TValue> }
+
+/**
+ * Функция отписки от события.
+ */
+export type EventUnsubscribe = () => void
+
+/**
+ * Обработчик события.
+ */
+export type EventListener<TResult = undefined> = TResult extends undefined
+    ? () => void
+    : (result: TResult) => void
+
+/**
+ * Провайдер обязательных функций для работы.
+ */
+export interface IGlobalProvider {
+    /**
+     * Получить информацию о сущностях.
+     * @returns Информация о сущностях.
+     */
+    getEntitiesInfo(): IEntitiesInfo
+
+    /**
+     * Ожидать завершения обещания.
+     * @param channel - Канал обработки обещания.
+     * @param onSuccess - Функция, вызываемая при успехе.
+     * @param onError - Функция, вызываемая при неудаче.
+     * @param id - Уникальный идентификатор.
+     */
+    waitPromise(channel: string, onSuccess: (value: any) => void, onError?: (reason?: any) => void, id?: string): void
+
+    /**
+     * Сущности.
+     */
+    entities: {
+        /**
+         * Функции.
+         */
+        functions: {
+            [name: string]: (id: string, args: any[]) => IResult
+        },
+        /**
+         * События.
+         */
+        events: {
+            /**
+             * Добавить обработчик события.
+             * @param name - Имя события.
+             * @param listener - Обработчик события.
+             * @returns Функция отписки от события.
+             */
+            on(name: string, listener: EventListener<IResult>): EventUnsubscribe
+
+            /**
+             * Добавить одноразовы обработчик события.
+             * @param name - Имя события.
+             * @param listener - Обработчик события.
+             * @returns Функция отписки от события.
+             */
+            once(name: string, listener: EventListener<IResult>): EventUnsubscribe
+
+            /**
+             * Взывать событие.
+             * @param name - Имя события.
+             * @param value - Передаваемое значение.
+             */
+            emit(name: string, value: any): void
+        }
+        /**
+         * Переменные.
+         */
+        variables: {
+            [name: string]: {
+                get(): IResult
+                set(value: any): IResult
+            }
+        }
+    }
 }
 
-export interface PublishPropertyArgs {
-  name?: string
-  scope?: Scope
-  access?: Access
-}
+/**
+ * Информация о сущностях.
+ */
+export interface IEntitiesInfo {
+    /**
+     * Доступные переменные.
+     */
+    variables: Set<string>
 
-export type RendererEvent<T = void> = (handler: EventHandler<T>, isOnce?: boolean) => EventUnsubscriber
-export type MainEvent<T = void> = (handler: EventHandler<T>) => EventUnsubscriber
-export type EventEmitter = (...args: any[]) => any
-export type EventReceiver<I = void, O = I> = (input: I) => O
-export type EventUnsubscriber = () => void
-export type EventHandler<T = void> = (result: T) => void
-
-export type PublicFunction = (...args: any[]) => any
-
-export interface PublicProperty<T> {
-  get?(): T,
-  set?(value: T): void
-}
-
-export interface RendererPublic {
-  __register__?(instance: any): void
-}
-
-export interface GlobalProvider {
-  getInfo(): Info
-  waitPromise(name: string, resolve: (value: any) => void, reject?: (reason?: any) => void, secret?: number): void
-  provided: {
-    functions: Record<string, (secret: number, args: any[]) => IPCResult>,
-    mainEvents: Record<string, (type: 'on' | 'once', handler: EventHandler<IPCResult>) => EventUnsubscriber>
-    rendererEvents: Record<string, (arg: any) => void>
-    properties: Record<string, { get(): IPCResult, set(val: any): IPCResult }>
-  }
-}
-
-export interface Info {
-  properties: Set<string>
-  functions: Set<string>
-  mainEvents: Set<string>
-  rendererEvents: Set<string>
-  scopes: Map<string, Set<Scope>>
-  accesses: Map<string, Set<Access>>
+    /**
+     * Доступные функции.
+     */
+    functions: Set<string>
 }

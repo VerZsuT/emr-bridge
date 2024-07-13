@@ -1,37 +1,89 @@
-import { Scope } from './enums.js'
-
-export class NoSetAccessError extends Error {
-  constructor(name: string) { super(`No access to setting '${name}'`) }
-}
-
+/**
+ * Нет доступа к получению переменной.
+ */
 export class NoGetAccessError extends Error {
-  constructor(name: string) { super(`No access to getting '${name}'`) }
+    public constructor(name: string) {
+        super(`Нет доступа к получению '${name}'.`)
+    }
 }
 
-export class NotProvidedIntoScopeError extends Error {
-  constructor(name: string, scope: Scope) { super(`'${name}' is not provided into ${scope} scope`) }
+/**
+ * Нет публичных сущностей.
+ */
+export class NotProvidedFromMainError extends Error {
+    public constructor() {
+        super('Публичные сущности не найдены. Добавьте их в main процессе.')
+    }
 }
 
-export class NotProvidedFromMain extends Error {
-  constructor() { super('Public methods from main is not provided. Call any publish methods to provide it from main process.') }
+/**
+ * Публикация доступна только в main процессе.
+ */
+export class PublishMethodsUnavailableError extends Error {
+    public constructor() {
+        super('Публикация доступна только в main процессе.')
+    }
 }
 
+/**
+ * Нет провайдера.
+ */
 export class GlobalProviderNotFoundError extends Error {
-  constructor() { super('Required methods not provided. Call "provideFromMain" in preload process.') }
+    public constructor() {
+        super('Провайдер не найден. Вызовите "provideFromMain" в preload процессе.')
+    }
 }
 
+/**
+ * Попытка установить свойство, доступное только для чтения.
+ */
 export class TrySetReadonlyError extends Error {
-  constructor(name: string) { super(`'${name}' is readonly`) }
+    public constructor(name: string) {
+        super(`'${name}' доступно только для чтения.`)
+    }
 }
 
-export class TryUseBridgeInPreload extends Error {
-  constructor() { super('"Bridge" is unavailable in main process. In preload use "Main" instead.') }
+/**
+ * Использование неверного `Bridge` в preload процессе.
+ */
+export class WrongBridgeInPreloadError extends Error {
+    public constructor() {
+        super('Попытка использовать в preload процессе "Bridge" для renderer процесса. Проверьте импорт.')
+    }
 }
 
-export class TryUseMainInRenderer extends Error {
-  constructor() { super('"Main" is unavailable in renderer process. Use "Bridge" instead') }
+/**
+ * Использование неверного `Bridge` в renderer процессе.
+ */
+export class WrongBridgeInRendererError extends Error {
+    public constructor() {
+        super('Попытка использовать в renderer процессе "Bridge" для preload процесса. Проверьте импорт.')
+    }
 }
 
-export class TryUseMainInMain extends Error {
-  constructor() { super('"Main" is unavailable in main process.') }
+/**
+ * Попытка использовать `Bridge` в main процессе.
+ */
+export class TryUseBridgeInMainError extends Error {
+    public constructor() {
+        super('"Bridge" недоступен в main процессе.')
+    }
+}
+
+/**
+ * Попытка добавить провайдер в main процессе.
+ */
+export class TryProvideInMainError extends Error {
+    public constructor() {
+        super('"provideFromMain" недоступен в main процессе.')
+    }
+}
+
+/**
+ * Попытка добавить провайдер в renderer процессе.
+ */
+export class TryProvideInRendererError extends Error {
+    public constructor() {
+        super('"provideFromMain" недоступен в renderer процессе.')
+    }
 }

@@ -1,461 +1,268 @@
 # Electron main-renderer bridge (emr-bridge)
 
-_Only for Electron_  
-JS library for easily providing access to the **main** from the **renderer** process
+_Только для Electron._
 
-## Table of contents
+_Полная поддержка TypeScript._
 
-- [Installation](#installation)
-- [Usage](#usage)
-  - [static](#static-methods-and-properties)
-  - [non-static](#methods-and-properties)
-  - [functions and variables](#functions-and-variables)
-  - [scopes](#scopes)
-  - [access](#restricting-access-to-variables)
-  - [usage in renderer](#access-from-renderer-and-preload)
-  - [promises](#promises)
-  - [events](#events-system)
+Уменьшает boilerplate при работе с **Electron IPC**:
+- Функционал событий.
+- Лёгкая передача экземпляров классов.
+- Простое использование промисов.
+- Быстрая публикация переменных и функций из `main` в `renderer` / `preload`.
 
-## Installation
+## Содержание
 
-```text
-npm i emr-bridge
+- [Установка](#установка)
+- [Использование](#использование)
+  - [публикация](#публикация-функций-и-переменных)
+  - [renderer и preload](#использование-в-renderer-и-preload)
+  - [промисы](#промисы)
+  - [события](#события)
+  - [передача экземпляров классов](#передача-экземпляров-классов)
+
+## Установка
+
+```cmd
+npm i emr-bridge@latest
 ```
 
-## Usage
-
-*If you need CommonJS modules, then use `emr-bridge/cjs`*
-
-There are three ways to use
-
-> In any of the cases, you need to insert this code into preload
+Для работы библиотеки требуется вставить следующий код в preload процесс.
 
 ```js
-// Preload process
-import { provideFromMain } from 'emr-bridge'
+import { provideFromMain } from 'emr-bridge/preload'
 
 provideFromMain(true /* context isolation */)
 ```
 
-> To use experimental non-static decorators, it is required to wrap the creation of a class instance in the `providePublic` function
+## Использование
+
+*Если требуется CommonJS, то используем `emr-bridge/cjs`*.
+
+### Публикация функций и переменных
+
+Для публикации функций и переменных из `main` процесса библиотека предоставляет
+функции `publishFunction` и `publishVariable` из **emr-bridge/main**.
 
 ```js
 // Main process
-import { providePublic } from 'emr-bridge/exp'
+import { publishFunction, publishVariable } from 'emr-bridge/main'
 
-class MainPublic { /*...*/ }
-
-const instance = providePublic(new MainPublic())
-```
-
-> All experimental decorators can be found in `emr-bridge/exp`
-
-### Static methods and properties
-
-Use **publicMethod**/**publicProperty**/**publicGetter**/**publicSetter**.
-
-```ts
-// Main process
-import { publicMethod, publicProperty, publicGetter, publicSetter, Access } from 'emr-bridge'
-
-class User {
-  private static name = 'Name'
-  private static age = 20
-  private static money = 1000
-  
-  @publicGetter('userBalance')
-  static get balance(): string {
-    return `${this.money}$`
-  }
-  
-  @publicSetter('userBalance')
-  static set balance(newBalance: string) {
-    this.money = Number(newBalance.split('$')[0])
-  }
-  
-  @publicGetter({
-    name: 'userInfo',
-    access: Access.get
-  })
-  static get info(): string {
-    return `Name: '${this.name}'; Age: '${this.age}'; Money: '${this.money}';`
-  }
-
-  @publicProperty()
-  static id = 'ID_AJWD3KLW23DK231K'
-  
-  @publicMethod()
-  static setName(newName: string): void {
-    this.name = newName
-  }
-  
-  @publicMethod('getUserAge')
-  static getAge(): number {
-    return this.age
-  }
-}
-```
-
-### Methods and properties
-
-Use **publicMethod**/**publicProperty**/**publicGetter**/**publicSetter**.
-
-```ts
-// Main process
-import { publicMethod, publicProperty, publicGetter, publicSetter, Access } from 'emr-bridge'
-
-class User {
-  private name = 'Name'
-  private age = 20
-  private money = 1000
-
-  @publicProperty()
-  id = 'ID_AJWD3KLW23DK231K'
-  
-  @publicGetter()
-  get balance(): string {
-    return `${this.money}$`
-  }
-  
-  @publicSetter()
-  set balance(newBalance: string) {
-    this.money = Number(newBalance.split('$')[0])
-  }
-  
-  @publicGetter({
-    name: 'userInfo',
-    access: Access.get
-  })
-  get info(): string {
-    return `Name: '${this.name}'; Age: '${this.age}'; Money: '${this.money}';`
-  }
-  
-  @publicMethod()
-  setName(newName: string): void {
-    this.name = newName
-  }
-  
-  @publicMethod('getUserAge')
-  getAge(): number {
-    return this.age
-  }
-}
-
-const user = new User()
-```
-
-### Functions and variables
-
-Use **publicFunction** and **publicVariable**.
-
-```ts
-// Main process
-import { publicFunction, publicVariable } from 'emr-bridge'
-
-publicFunction('sayHello', sayHello)
-publicFunction('getUserName', getName)
-publicVariable('count', {
-  get(): number {
-    return count
-  },
-  set(value: number) {
-    count = value
-  }
-})
-
-let count = 0
-
-const user = {
-  name: 'Name',
-  age: 20
-}
-
-function sayHello(name: string): string {
+publishFunction('sayHello', name => {
   return `Hello, ${name}!`
-}
+})
 
-function getName(): string {
-  return user.name
-}
-```
-
-### Scopes
-
-In order to set a specific scope, use the **scope** property.
-
-Accessing an entity outside the specified scope will result in an error being thrown.
-
-```ts
-// Main process
-
-// static and non-static
-import { Scope, Access, publicMethod, publicGetter } from 'emr-bridge'
-
-class User {
-  private static age = 20
-  private name = 'Name'
-  
-  @publicGetter({
-    scope: Scope.preload,
-    access: Access.get
-  })
-  get count(): number {
-    return 30
-  }
-  
-  @publicMethod({ scope: Scope.preload })
-  static getAge(): number {
-    return this.age
-  }
-  
-  @publicMethod({
-    name: 'getUserName',
-    scope: Scope.renderer
-  })
-  getName(): string {
-    return this.name
-  }
-}
-
-new User()
-```
-
-```ts
-// Main process
-// functions and variables
-import { publicFunction, publicVariable, Scope } from 'emr-bridge'
-
-publicFunction('getName', getName, [Scope.preload])
-publicVariable('count', {
-  get(): number {
-    return count
-  },
-  set(value: number) {
-    count = value
-  }
-}, [Scope.renderer])
-
-let count = 0
-
-function getName(): string {
-  return 'Name'
-}
-```
-
-By default, the entity is available in any scope.  
-Using an entity outside the specified scope _will cause an error_.
-
-### Restricting access to variables
-
-```ts
-// Main process
-// static and non-static
-import { publicGetter, Access } from 'emr-bridge'
-
-class User {
-  private static name = 'Name'
-  private static surname = 'Surname'
-  
-  @publicGetter({ access: Access.get })
-  static get fullName(): string {
-    return `${this.name} ${this.surname}`
-  }
-  
-  @publicProperty({
-    name: 'userAge',
-    access: Access.get
-  })
-  get age(): number {
-    return 20
-  }
-}
-
-new User()
-```
-
-```ts
-// Main process
-// for variables
-import { publicVariable } from 'emr-bridge'
-
-publicVariable('count', {
-  // get access
-  get(): number {
-    return count
-  },
-  // set access
-  set(value: number) {
-    count = value
+publishFunction('getUser', () => {
+  return {
+    name: 'Name',
+    age: 20
   }
 })
 
 let count = 0
+
+publishVariable('count', {
+  get: () => count,
+  set: value => count = value
+})
 ```
 
-### Access from renderer and preload
+### Использование в renderer и preload
 
-For _preload_, use **Main**
+Пример использования ранее опубликованных функций и переменных.
 
-```ts
-// Preload process
-import { Main, provideFromMain } from 'emr-bridge/preload'
-
-provideFromMain()
-
-interface IProvidedPublic {
-  getUserName(): string
-  setUserAge(newAge: number): void
-  count: number
-}
-
-const main = Main.as<IProvidedPublic>()
-
-main.getUserName()
-main.count++
-main.setUserAge(20)
-```
-
-For _renderer_, use **Bridge**
-
-```ts
+```js
 // Renderer process
 import { Bridge } from 'emr-bridge/renderer'
 
-interface IProvidedPublic {
-  getUserName(): string
-  setUserAge(newAge: number): void
-  count: number
-}
+// `as` в TypeScript позволяет кастовать в нужный тип.
+const bridge = Bridge.as()
 
-const bridge = Bridge.as<IProvidedPubic>()
+// Выведет текущее значение count из main (0).
+console.log(bridge.count)
 
-bridge.getUserName()
-bridge.count--
-bridge.setUserAge(30)
+// Увеличит значение count в main на единицу.
+bridge.count++
+
+// { name: 'Name', age: 20 }.
+bridge.getUser()
+
+// 'Hello, Aleksandr!'.
+bridge.seyHello('Aleksandr')
 ```
 
-### Promises
+Для `preload` процесса всё идентично, но требуется импортировать из **emr-bridge/preload**.
 
-The library also allows you to pass Promises from main to renderer
+### Промисы
 
-```ts
+Поддержка промисов реализована "из коробки".
+
+```js
 // Main process
-import { publicFunction } from 'emr-bridge'
+import { publishFunction } from 'emr-bridge/main'
 
-publicFunction('delay1s', () => {
-  return new Promise<void>(resolve => {
-    setTimeout(resolve, 1000)
+publishFunction('after1s', () => {
+  return new Promise(resolve => {
+    setTimeout(() => resolve('after1s'), 1000)
   })
 })
 ```
 
-```ts
+```js
 // Renderer process
 import { Bridge } from 'emr-bridge/renderer'
 
-interface IPublic {
-  delay1s(): Promise<void>
+const bridge = Bridge.as()
+
+async function foo() {
+  const result = await bridge.after1s()
+
+  // Через 1 секунду выведет сообщение 'after1s', полученное из main.
+  console.log(result)
 }
-
-const bridge = Bridge.as<IPublic>()
-
-bridge.delay1s().then(() => console.log('After 1 second'))
 ```
 
-### Events system
+### События
 
-If the event source is the **main** process
+Пример обработки события, которое вызывается из `renderer` или `preload`.
 
-```ts
+```js
 // Main process
-import { publicMainEvent, publicClassMainEvent } from 'emr-bridge'
+import { on, once } from 'emr-bridge/main'
 
-const tickWithReceiver = publicMainEvent('tickWithReceiver', () => (new Date().toTimeString()))
-setInterval(tickWithReceiver, 1000)
-
-// Or
-const tick = publicMainEvent('tick')
-setInterval(() => tick(new Date().toTimeString()), 1000)
-
-// The passed function receives the argument passed to the event and returns the value passed to the renderer process
-const pay = publicMainEvent('pay', (count: number) => `${count} $`)
-pay(200) // Send the string '200 $' to the renderer process
-
-
-// Or with classes
-class MainPublicEvents {
-  @publicClassMainEvent()
-  tick() {}
-
-  @publicClassMainEvent()
-  tickWithReceiver() { return new Date().toTimeString() }
-
-  @publicClassMainEvent()
-  pay(count: number) { return `${count} $` }
-}
-const events = new MainPublicEvents()
-setInterval(events.tickWithReceiver, 1000)
-setInterval(() => events.tick(new Date().toTimeString()), 1000)
-events.pay(200)
+on('message-from-renderer', message => console.log(message))
+// once('message-from-renderer', message => console.log(message))
 ```
 
-```ts
-// Renderer process
-import { Bridge, MainEvent } from 'emr-bridge/renderer'
-
-interface IPublic {
-  onTick: MainEvent<string>
-  onTickWithReceiver: MainEvent<string>
-  onPay: MainEvent<string>
-}
-
-const bridge = Bridge.as<IPublic>()
-// on + Capitalize<EventName>
-bridge.onTick(time => `Time from tick: ${console.log(time)}`)
-bridge.onTickWithReceiver(time => `Time from receiver: ${console.log(time)}`)
-bridge.onPay(count => `Dollars: ${count}`)
-```
-
-If the event source is the **renderer** process
-
-```ts
-// Main process
-import { publicRendererEvent, publicClassRendererEvent, RendererEvent } from 'emr-bridge'
-
-const onMessage = publicRendererEvent<string>('onMessage'/* or 'message' */)
-onMessage(message => console.log(message))
-
-// With receiver
-const onMessageWithReceiver = publicRendererEvent('onMessageWithReceiver', (message: string) => `Message: ${message}`)
-onMessageWithReceiver(message => console.log(message))
-
-
-// Classes
-class RendererPublicEvents {
-  @publicClassRendererEvent()
-  onMessage!: RendererEvent<string>
-
-  @publicClassRendererEvent((message: string) => `Message: ${message}`)
-  onMessageWithReceiver!: RendererEvent<string>
-}
-const events = new RendererPublicEvents()
-events.onMessage(message => console.log(message))
-events.onMessageWithReceiver(message => console.log(message))
-```
-
-```ts
+```js
 // Renderer process
 import { Bridge } from 'emr-bridge/renderer'
 
-interface IPublic {
-  message(message: string): void
-  messageWithReceiver(message: string): void
-}
+const bridge = Bridge.as()
 
-const bridge = Bridge.as<IPublic>()
-// Uncapitalize<EventNameWithoutON>
-bridge.message('Message from renderer')
-bridge.messageWithReceiver('Hello, main process')
+// Вызовет событие и выведет в консоль main процесса 'Hello from renderer'
+bridge.emit('message-from-renderer', 'Hello from renderer')
 ```
 
-**NOTE**: The transmitted value can be `Promise`. In this case, the receiving party will wait for it to resolve and only then will call the handler
+Пример обработки события, которое вызывается из `main`.
+
+```js
+// Main process
+import { emitEvent } from 'emr-bridge/main'
+
+// Вызовет событие и выведет в консоль renderer процесса 'Hello from main'
+emitEvent('message-from-main', 'Hello from main')
+```
+
+```js
+// Renderer process
+import { Bridge } from 'emr-bridge/renderer'
+
+const bridge = Bridge.as()
+
+bridge.on('message-from-main', message => console.log(message))
+```
+
+### Передача экземпляров классов
+
+По умолчанию, передача экземпляров пользовательских классов через IPC невозможна.
+
+Библиотека решает эту проблему путём реализации паттерна 'Снимок'.
+
+Передаваемый класс должен реализовать функции `getSnapshot` и `updateFromSnapshot`, а также иметь конструктор без параметров.
+
+```js
+// Human.js
+export default class Human {
+  name = undefined
+  age = undefined
+
+  constructor(
+    name = 'Aleksandr',
+    age = 30
+  ) {
+    this.name = name
+    this.age = age
+  }
+
+  getSnapshot() {
+    return {
+      name: this.name,
+      age: this.age
+    }
+  }
+
+  updateFromSnapshot(snapshot) {
+    this.name = snapshot.name
+    this.age = snapshot.age
+  }
+}
+```
+
+Для передачи экземпляра класса требуется на **принимающей** стороне передать сам класс в качестве аргумента функции:
+
+```js
+// Main process
+import { publishFunction } from 'emr-bridge/main'
+import Human from './Human'
+
+// Выводим имя человека, переданного из `preload` или `renderer`.
+publishFunction(
+  'displayName',
+  human => console.log(human.name),
+  /* Говорим какие классы надо принять.
+     Порядок в массиве соответствует порядку таких аргументов в функции.
+     Для (human, car, engine) будет [Human, Car, Engine].
+     Для (human, surname, car) будет [Human, Car], так как 'surname' имеет стандартный тип String.
+     Стандартные типы (String, Number..) указывать не требуется. */
+  [Human]
+)
+
+/* У событий также есть такой аргумент
+  on('displayName', human => console.log(human.name), [Human])
+  once('displayName', human => console.log(human.name), [Human])
+*/
+```
+
+```js
+// Renderer process
+import { Bridge } from 'emr-bridge/renderer'
+import Human from './Human'
+
+const bridge = Bridge.as()
+
+// Передаст данные через создание снимка.
+bridge.displayName(new Human('Dima', 25))
+```
+
+Для получения экземпляра класса из `main` в `renderer` или `preload` нужно использовать `bridge.call`.
+
+_Такое требование связано со сложностью реализации._
+
+```js
+// Main process
+import { publishFunction } from 'emr-bridge/main'
+import Human from './Human'
+
+// Передаём человека в `preload` или `renderer` процесс.
+publishFunction('getHuman', () => new Human('Artem', 40))
+```
+
+```js
+// Renderer process
+import { Bridge } from 'emr-bridge/renderer'
+import Human from './Human'
+
+const bridge = Bridge.as()
+
+// Выведет в консоль 25
+console.log(
+  bridge.call(bridge.getHuman, Human).name
+)
+
+/* Альтернативный вариант
+// Оборачиваем оригинал новой функцией, которая автоматически преобразует ответ в нужный класс.
+bridge.getHuman = bridge.returns(bridge.getHuman, Human)
+
+console.log(bridge.getHuman().name)
+*/
+```
