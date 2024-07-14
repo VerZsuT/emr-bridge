@@ -218,8 +218,8 @@ publishFunction(
 )
 
 /* У событий также есть такой аргумент
-  on('displayName', human => console.log(human.name), [Human])
-  once('displayName', human => console.log(human.name), [Human])
+  on('displayName', human => console.log(human.name), Human)
+  once('displayName', human => console.log(human.name), Human)
 */
 ```
 
