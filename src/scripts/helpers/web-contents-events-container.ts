@@ -7,7 +7,7 @@ export default class WebContentsEventContainer {
     /**
      * Контейнер событий.
      */
-    private container = {} as {
+    private containers = {} as {
         /**
          * Название события.
          */
@@ -30,8 +30,7 @@ export default class WebContentsEventContainer {
      * @param sender - Отправитель.
      */
     public addOn(event: string, sender: WebContents): void {
-        this.addEvent(event)
-        this.container[event].on.push(sender)
+        this.addEvent(event).on.push(sender)
     }
 
     /**
@@ -40,8 +39,7 @@ export default class WebContentsEventContainer {
      * @param sender - Отправитель.
      */
     public addOnce(event: string, sender: WebContents): void {
-        this.addEvent(event)
-        this.container[event].once.push(sender)
+        this.addEvent(event).once.push(sender)
     }
 
     /**
@@ -50,7 +48,7 @@ export default class WebContentsEventContainer {
      * @returns многоразовые отправители для события.
      */
     public getOn(event: string): WebContents[] {
-        return this.getEvent(event).on.filter(sender => !sender.isDestroyed())
+        return this.addEvent(event).on
     }
 
     /**
@@ -59,7 +57,7 @@ export default class WebContentsEventContainer {
      * @returns Одноразовые отправители для события.
      */
     public getOnce(event: string): WebContents[] {
-        return this.getEvent(event).once.filter(sender => !sender.isDestroyed())
+        return this.addEvent(event).once
     }
 
     /**
@@ -68,9 +66,9 @@ export default class WebContentsEventContainer {
      * @returns Отправители для события.
      */
     public getAll(event: string): WebContents[] {
-        const senders = this.getEvent(event)
+        const container = this.addEvent(event)
 
-        return [...senders.on, ...senders.once]
+        return [...container.on, ...container.once]
     }
 
     /**
@@ -78,25 +76,20 @@ export default class WebContentsEventContainer {
      * @param event - Имя события.
      */
     public clearOnce(event: string): void {
-        this.getEvent(event).once = []
+        this.addEvent(event).once = []
     }
 
     /**
      * Добавить контейнер события.
      * @param name - Имя события.
+     * @returns Добавленный контейнер.
      */
-    private addEvent(name: string): void {
-        this.container[name] ??= { on: [], once: [] }
-    }
+    private addEvent(name: string): (typeof this.containers)[string] {
+        const container = this.containers[name] ??= { on: [], once: [] }
 
-    /**
-     * Получить контейнер события.
-     * @param name - Имя события.
-     * @returns Контейнер события.
-     */
-    private getEvent(name: string): (typeof this.container)[string] {
-        this.addEvent(name)
-
-        return this.container[name]
+        return this.containers[name] = {
+            on: container.on.filter(item => !item.isDestroyed()),
+            once: container.once.filter(item => !item.isDestroyed()),
+        }
     }
 }

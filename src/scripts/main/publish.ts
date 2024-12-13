@@ -1,6 +1,4 @@
-/*
-    Методы публикации в main процессе.
-*/
+// Методы публикации в main процессе.
 
 import { ipcMain } from 'electron'
 
@@ -83,13 +81,13 @@ export function emitEvent<T = unknown>(name: string, value?: T): void {
 export function on<TValue = any>(
     name: string,
     listener: EventListener<TValue>,
-    receives: HasSnapshotClass<TValue>
+    receives?: HasSnapshotClass<TValue>
 ): EventUnsubscribe {
     canThrowError()
 
     const emitChannel = IpcChannel.event.emit(name)
     const handler = (_: any, { value }: IResult<TValue>) => {
-        if (Transfer.isSnapshotValue(value)) {
+        if (Transfer.isSnapshotValue(value) && receives) {
             listener(Transfer.getFromSnapshot(value, receives) as TValue)
         } else {
             listener(value!)
@@ -111,13 +109,13 @@ export function on<TValue = any>(
 export function once<TValue = any>(
     name: string,
     listener: EventListener<TValue>,
-    receives: HasSnapshotClass<TValue>
+    receives?: HasSnapshotClass<TValue>
 ): EventUnsubscribe {
     canThrowError()
 
     const emitChannel = IpcChannel.event.emit(name)
     const handler = (_: any, { value }: IResult<TValue>) => {
-        if (Transfer.isSnapshotValue(value)) {
+        if (Transfer.isSnapshotValue(value) && receives) {
             listener(Transfer.getFromSnapshot(value, receives) as TValue)
         } else {
             listener(value!)
