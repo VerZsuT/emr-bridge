@@ -62,6 +62,6 @@ export default class Transfer {
 			!!value
 			&& typeof value === 'object'
 			&& 'takeSnapshot' in value
-			&& 'fromSnapshot' in value)
+			&& 'updateFromSnapshot' in value)
 	}
 }
