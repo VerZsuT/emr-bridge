@@ -1,25 +1,47 @@
 {
   "name": "emr-bridge",
-  "version": "2.0.2",
+  "version": "2.1.0",
   "description": "Allows you to easily give access to main methods from the renderer process",
   "main": "esm/entries/index.js",
   "type": "module",
   "scripts": {
-    "compile": "tsc --project ./tsconfig.json && tsc --project ./tsconfig.cjs.json",
+    "clean": "node ./scripts/clean.mjs",
+    "compile": "npm run clean && tsc --project ./tsconfig.json && tsc --project ./tsconfig.cjs.json && node ./scripts/write-cjs-package.mjs",
+    "typecheck": "tsc --project ./tsconfig.test.json",
+    "test": "node --import ./test/setup.mjs --test \"test/*.test.ts\"",
     "pack": "npm run compile && npm pack"
   },
   "types": "esm/entries/index.d.ts",
-  "files": [ "esm", "cjs"],
+  "files": [
+    "esm",
+    "cjs"
+  ],
   "typesVersions": {
     "*": {
-      ".": ["./esm/entries/index.d.ts"],
-      "./cjs": ["./cjs/entries/index.d.ts"],
-      "./main": ["./esm/entries/main.d.ts"],
-      "./renderer": ["./esm/entries/renderer.d.ts"],
-      "./preload": ["./esm/entries/preload.d.ts"],
-      "./cjs/main": ["./cjs/entries/main.d.ts"],
-      "./cjs/renderer": ["./cjs/entries/renderer.d.ts"],
-      "./cjs/preload": ["./cjs/entries/preload.d.ts"]
+      ".": [
+        "./esm/entries/index.d.ts"
+      ],
+      "./cjs": [
+        "./cjs/entries/index.d.ts"
+      ],
+      "./main": [
+        "./esm/entries/main.d.ts"
+      ],
+      "./renderer": [
+        "./esm/entries/renderer.d.ts"
+      ],
+      "./preload": [
+        "./esm/entries/preload.d.ts"
+      ],
+      "./cjs/main": [
+        "./cjs/entries/main.d.ts"
+      ],
+      "./cjs/renderer": [
+        "./cjs/entries/renderer.d.ts"
+      ],
+      "./cjs/preload": [
+        "./cjs/entries/preload.d.ts"
+      ]
     }
   },
   "exports": {
@@ -44,9 +66,9 @@
   "author": "VerZsuT",
   "license": "MIT",
   "peerDependencies": {
-    "electron": ">=20.0.0"
+    "electron": ">=40.0.0"
   },
   "devDependencies": {
-    "typescript": "^5.7.3"
+    "typescript": "^7.0.2"
   }
 }

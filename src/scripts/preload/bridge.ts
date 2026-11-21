@@ -1,26 +1,30 @@
 import { ipcRenderer } from 'electron'
 
 import { NotProvidedFromMainError, TryUseBridgeInMainError } from '../../errors.js'
-import type { EventListener, EventUnsubscribe, IBridge, IResult } from '../../types.js'
+import type { EventListener, EventUnsubscribe, IBridge, IEntitiesInfo, IResult } from '../../types.js'
 import BaseBridge from '../base-bridge.js'
-import { Errors, IpcChannel, Transfer } from '../helpers/index.js'
+import { EntitiesInfo, Errors, IpcChannel, Names, Transfer } from '../helpers/index.js'
 import IPCTunnel from '../renderer/tunnels.js'
 
 /**
  * Мост preload-main.
  */
 export class PreloadBridge extends BaseBridge {
-    protected override readonly entitiesInfo = ipcRenderer.sendSync(IpcChannel.publicInfo.get())
+    protected override readonly entitiesInfo: IEntitiesInfo
 
     /**
      * Создать мост preload-main.
      */
     public constructor() {
         super()
-        
-        if (!this.entitiesInfo) {
+
+        const info = EntitiesInfo.read(ipcRenderer.sendSync(IpcChannel.publicInfo.get()))
+
+        if (!info) {
             throw new NotProvidedFromMainError()
         }
+
+        this.entitiesInfo = info
 
         this.init()
     }
@@ -50,12 +54,15 @@ export class PreloadBridge extends BaseBridge {
     }
 
     protected emitEvent(name: string, value: any): void {
+        Names.validateEvent(name)
+
         const tunnel = new IPCTunnel.Event(name)
 
-        if (value instanceof Promise) {
-            value
-                .then(val => tunnel.emit(Transfer.toTransferable(val)))
-                .catch(reason => tunnel.error(String(reason)))
+        if (Transfer.isPromiseLike(value)) {
+            value.then(
+                result => tunnel.emit(Transfer.toTransferable(result)),
+                reason => tunnel.error(reason)
+            )
         } else {
             tunnel.emit(value)
         }

@@ -21,7 +21,11 @@ export default class IpcResult {
      * @returns Результат со значением.
      */
     public static createWithValue<T = unknown>(value: T, id?: string): IResult {
-        return { value: Transfer.toTransferable(value), id }
+        const transferable = Transfer.toTransferable(value)
+
+        return id === undefined
+            ? { value: transferable }
+            : { value: transferable, id }
     }
 
     /**
@@ -30,17 +34,42 @@ export default class IpcResult {
      * @param id - Уникальный идентификатор.
      * @returns Результат с ошибкой.
      */
-    public static createWithError(error?: Error | string, id?: string): IResult {
-        let resultError: string
+    public static createWithError(error?: unknown, id?: string): IResult {
+        const message = IpcResult.stringifyError(error)
 
-        if (error === undefined) {
-            resultError = "Unknown error"
-        } else if (typeof error === 'string') {
-            resultError = error
-        } else {
-            resultError = error.stack ?? error.message
+        return id === undefined
+            ? { error: message }
+            : { error: message, id }
+    }
+
+    /**
+     * Привести брошенное значение к строке.
+     *
+     * Ошибкой может быть что угодно (`throw null`, строка, объект),
+     * поэтому сериализация не должна сама бросать исключение.
+     * @param error - Брошенное значение.
+     */
+    private static stringifyError(error: unknown): string {
+        if (error === undefined || error === null) {
+            return 'Unknown error'
         }
 
-        return { error: resultError, id }
+        if (typeof error === 'string') {
+            return error
+        }
+
+        if (error instanceof Error) {
+            return error.stack ?? error.message
+        }
+
+        if (typeof error === 'object') {
+            try {
+                return JSON.stringify(error) ?? String(error)
+            } catch {
+                return String(error)
+            }
+        }
+
+        return String(error)
     }
 }

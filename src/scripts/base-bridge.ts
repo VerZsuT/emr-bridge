@@ -1,6 +1,6 @@
-import { NoGetAccessError, TrySetReadonlyError } from '../errors.js'
+import { NoGetAccessError, NoResponseFromMainError, TrySetReadonlyError } from '../errors.js'
 import type { EventListener, EventUnsubscribe, IBridge, IEntitiesInfo, IHasSnapshot, IResult } from '../types.js'
-import { Errors, Id, Transfer } from './helpers/index.js'
+import { Errors, Id, Names, Transfer } from './helpers/index.js'
 
 /**
  * Базовый класс моста до main.
@@ -28,31 +28,54 @@ export default abstract class BaseBridge implements IBridge {
     }
 
     public emit(name: string, value: any): void {
+        Names.validateEvent(name)
         this.emitEvent(name, Transfer.toTransferable(value))
     }
 
     public on<TValue = any>(name: string, listener: EventListener<TValue>): EventUnsubscribe {
-        return this.handleEvent(name, 'on', ({ value, error }) => {
-            this.handlePossibleError(`event: ${name}`, error)
-            listener(value as any)
+        Names.validateEvent(name)
+        this.assertListener(listener)
+
+        return this.handleEvent(name, 'on', (result) => {
+            if (!result) {
+                return
+            }
+
+            this.handlePossibleError(`event: ${name}`, result.error)
+            listener(result.value as any)
         })
     }
 
     public once<TValue = any>(name: string, listener: EventListener<TValue>): EventUnsubscribe {
-        return this.handleEvent(name, 'once', ({ value, error }) => {
-            this.handlePossibleError(`event: ${name}`, error)
-            listener(value as any)
+        Names.validateEvent(name)
+        this.assertListener(listener)
+
+        return this.handleEvent(name, 'once', (result) => {
+            if (!result) {
+                return
+            }
+
+            this.handlePossibleError(`event: ${name}`, result.error)
+            listener(result.value as any)
         })
     }
 
     public call<
         TFunc extends (...args: any[]) => InstanceType<TClass>,
         TClass extends { new(): IHasSnapshot }
-    >(func: TFunc, Class: TClass, args: Parameters<TFunc>): InstanceType<TClass> {
+    >(func: TFunc, Class: TClass, args: Parameters<TFunc> = [] as unknown as Parameters<TFunc>): InstanceType<TClass> {
         const value = func(...args)
 
         if (Transfer.isSnapshotValue(value)) {
             return Transfer.getFromSnapshot(value, Class)
+        }
+
+        if (Transfer.isPromiseLike(value)) {
+            return value.then(result => (
+                Transfer.isSnapshotValue(result)
+                    ? Transfer.getFromSnapshot(result, Class)
+                    : result
+            )) as InstanceType<TClass>
         }
 
         return value
@@ -113,8 +136,14 @@ export default abstract class BaseBridge implements IBridge {
      * Инициализация моста.
      */
     protected init(): void {
-        this.initFunctions()
-        this.initVariables()
+        const info = this.entitiesInfo
+
+        if (!info) {
+            throw new NoResponseFromMainError('entitiesInfo')
+        }
+
+        this.initFunctions(info.functions)
+        this.initVariables(info.variables)
     }
 
     /**
@@ -129,47 +158,67 @@ export default abstract class BaseBridge implements IBridge {
             return
         }
 
-        throw new Error(`Error on ${channel}.\n${error}`.replace('Error: ', ''))
+        const message = error.startsWith('Error: ') ? error.slice(7) : error
+
+        throw new Error(`Error on ${channel}.\n${message}`)
     }
 
     /**
      * Инициализировать доступ к публичным функциям.
+     * @param functions - Имена функций.
      */
-    protected initFunctions(): void {
-        for (const name of this.entitiesInfo.functions) {
+    protected initFunctions(functions?: Iterable<string>): void {
+        for (const name of functions ?? []) {
+            Names.validateEntity(name)
+
             this.define(name, {
                 value: (...args: any[]) => {
                     const id = Id.new()
                     const preparedArgs = args.map(arg => Transfer.toTransferable(arg))
-                    const { error, promiseChannel, value } = this.callFunction(name, id, preparedArgs)
+                    const result = this.callFunction(name, id, preparedArgs)
 
-                    this.handlePossibleError(name, error)
-            
-                    return promiseChannel
-                        ? this.waitPromise(promiseChannel, id)
-                        : value
+                    if (!result) {
+                        throw new NoResponseFromMainError(name)
                     }
+
+                    this.handlePossibleError(name, result.error)
+
+                    return result.promiseChannel
+                        ? this.waitPromise(result.promiseChannel, id)
+                        : result.value
+                }
             })
         }
     }
 
     /**
      * Инициализировать доступ к публичным переменным.
+     * @param variables - Имена переменных.
      */
-    protected initVariables(): void {
-        for (const name of this.entitiesInfo.variables) {
+    protected initVariables(variables?: Iterable<string>): void {
+        for (const name of variables ?? []) {
+            Names.validateEntity(name)
+
             this.define(name, {
                 get: () => {
-                    const { error, value } = this.getVariable(name)
+                    const result = this.getVariable(name)
 
-                    this.handlePossibleError(name, error)
+                    if (!result) {
+                        throw new NoResponseFromMainError(name)
+                    }
 
-                    return value
+                    this.handlePossibleError(name, result.error)
+
+                    return result.value
                 },
                 set: (value: any): void => {
-                    const { error } = this.setVariable(name, value)
-                    
-                    this.handlePossibleError(name, error)
+                    const result = this.setVariable(name, value)
+
+                    if (!result) {
+                        throw new NoResponseFromMainError(name)
+                    }
+
+                    this.handlePossibleError(name, result.error)
                 }
             })
         }
@@ -180,18 +229,24 @@ export default abstract class BaseBridge implements IBridge {
      * @param name - Имя.
      * @param descriptor - Дескриптор значения.
      */
-    protected define<TValue = unknown>(name: string, descriptor?: TypedPropertyDescriptor<TValue>) {
-        const hasValue = Boolean(descriptor?.value)
+    protected define<TValue = unknown>(name: string, descriptor?: TypedPropertyDescriptor<TValue>): void {
+        if (!descriptor) {
+            throw new TypeError(`Не задан дескриптор сущности '${name}'.`)
+        }
+
+        const hasValue = 'value' in descriptor
 
         const defaultDescriptor: PropertyDescriptor = {
-            get: () => descriptor!.value,
+            get: () => descriptor.value,
             set: Errors.getThrower(TrySetReadonlyError, name),
-            enumerable: true
+            enumerable: true,
+            configurable: true
         }
         const noValueDescriptor: PropertyDescriptor = {
-            get: descriptor?.get || Errors.getThrower(NoGetAccessError, name),
-            set: descriptor?.set || Errors.getThrower(TrySetReadonlyError, name),
-            enumerable: true
+            get: descriptor.get || Errors.getThrower(NoGetAccessError, name),
+            set: descriptor.set || Errors.getThrower(TrySetReadonlyError, name),
+            enumerable: true,
+            configurable: true
         }
 
         Object.defineProperty(
@@ -201,5 +256,15 @@ export default abstract class BaseBridge implements IBridge {
                 ? defaultDescriptor
                 : noValueDescriptor
         )
+    }
+
+    /**
+     * Проверить, что обработчик события является функцией.
+     * @param listener - Обработчик.
+     */
+    private assertListener(listener: unknown): asserts listener is (...args: any[]) => void {
+        if (typeof listener !== 'function') {
+            throw new TypeError('Обработчик события должен быть функцией.')
+        }
     }
 }

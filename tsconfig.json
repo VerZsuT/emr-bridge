@@ -1,12 +1,13 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
+    "target": "ES2024",
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "newLine": "LF",
+    "rootDir": "./src",
     "outDir": "./esm",
     "lib": [
-      "ES2020",
+      "ES2024",
       "DOM"
     ],
     "strict": true,

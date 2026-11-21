@@ -87,3 +87,37 @@ export class TryProvideInRendererError extends Error {
         super('"provideFromMain" недоступен в renderer процессе.')
     }
 }
+
+/**
+ * Некорректное имя публикуемой сущности.
+ */
+export class InvalidEntityNameError extends Error {
+    public constructor(name: unknown, reserved = false) {
+        const reason = reserved
+            ? 'Имя зарезервировано мостом.'
+            : 'Имя должно быть непустой строкой допустимой длины.'
+
+        super(`Некорректное имя сущности '${String(name)}'. ${reason}`)
+        this.name = 'InvalidEntityNameError'
+    }
+}
+
+/**
+ * Некорректное имя события.
+ */
+export class InvalidEventNameError extends Error {
+    public constructor(name: unknown) {
+        super(`Некорректное имя события '${String(name)}'. Имя должно быть непустой строкой допустимой длины.`)
+        this.name = 'InvalidEventNameError'
+    }
+}
+
+/**
+ * Нет ответа от main процесса.
+ */
+export class NoResponseFromMainError extends Error {
+    public constructor(channel: string) {
+        super(`Нет ответа от main процесса по каналу '${channel}'.`)
+        this.name = 'NoResponseFromMainError'
+    }
+}

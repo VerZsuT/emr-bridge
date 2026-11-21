@@ -1,12 +1,13 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
+    "target": "ES2024",
     "module": "CommonJS",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "newLine": "LF",
+    "rootDir": "./src",
     "outDir": "./cjs",
     "lib": [
-      "es2020",
+      "es2024",
       "DOM"
     ],
     "strict": true,

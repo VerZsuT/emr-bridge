@@ -46,7 +46,13 @@ export default class IpcChannel {
 		 * @param name - Название события.
 		 * @returns Канал вызова события.
 		 */
-		emit: (name: string) => `EVENT_EMIT_${name}`
+		emit: (name: string) => `EVENT_EMIT_${name}`,
+
+		/**
+		 * Получить канал отписки от события.
+		 * @returns Канал отписки от события.
+		 */
+		off: () => 'EVENT_OFF'
 	}
 
 	/**
@@ -77,6 +83,16 @@ export default class IpcChannel {
 		 * @param channel - Канал, который возвращает обещание.
 		 * @returns Канал обработки обещания.
 		 */
-		get: (channel: string) => `${channel}_PROMISE`
+		get: (channel: string) => `${channel}_PROMISE`,
+
+		/**
+		 * Является ли канал каналом обработки обещания моста.
+		 * @param channel - Проверяемый канал.
+		 */
+		is: (channel: unknown): channel is string => (
+			typeof channel === 'string'
+			&& channel.startsWith(IpcChannel.func.call(''))
+			&& channel.endsWith('_PROMISE')
+		)
 	}
 }

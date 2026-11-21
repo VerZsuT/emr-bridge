@@ -41,16 +41,20 @@ export default class Transfer {
 
 	/**
 	 * Является ли переданное по IPC значение снимком.
+	 *
+	 * Проверяются собственные свойства, а не унаследованные, и допускаются
+	 * любые falsy-снимки (`0`, `false`, `''`, `null`).
 	 * @param value - Значение из IPC.
 	 */
 	public static isSnapshotValue(value: unknown): value is ISnapshotValue {
+		if (typeof value !== 'object' || value === null) {
+			return false
+		}
+
 		return (
-			!!value
-			&& typeof value === 'object'
-			&& '__type__' in value
-			&& '__snapshot__' in value
-			&& value.__type__ === 'snapshot'
-			&& !!value.__snapshot__)
+			Object.prototype.hasOwnProperty.call(value, '__type__')
+			&& Object.prototype.hasOwnProperty.call(value, '__snapshot__')
+			&& (value as ISnapshotValue).__type__ === 'snapshot')
 	}
 
 	/**
@@ -58,10 +62,25 @@ export default class Transfer {
 	 * @param value - Значение.
 	 */
 	public static isHasSnapshot(value: unknown): value is IHasSnapshot {
+		if (typeof value !== 'object' || value === null) {
+			return false
+		}
+
+		const candidate = value as Partial<IHasSnapshot>
+
 		return (
-			!!value
-			&& typeof value === 'object'
-			&& 'takeSnapshot' in value
-			&& 'updateFromSnapshot' in value)
+			typeof candidate.takeSnapshot === 'function'
+			&& typeof candidate.updateFromSnapshot === 'function')
+	}
+
+	/**
+	 * Является ли значение обещанием (или "thenable").
+	 * @param value - Значение.
+	 */
+	public static isPromiseLike<T = unknown>(value: unknown): value is PromiseLike<T> {
+		return (
+			typeof value === 'object'
+			&& value !== null
+			&& typeof (value as PromiseLike<T>).then === 'function')
 	}
 }

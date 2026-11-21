@@ -13,7 +13,7 @@ export default class Env {
      * Есть ли провайдер необходимых методов из `preload` в `renderer`. (`window.__provider__`)
      */
     static get hasProvider(): boolean {
-        return Boolean(window.__provider__)
+        return Env.hasWindow && Boolean(window.__provider__)
     }
 
     /**

@@ -5,3 +5,9 @@
 
 export type { EventListener, EventUnsubscribe, HasSnapshotClass, IBridge, IHasSnapshot } from '../types.js'
 
+/*
+	Ошибки не зависят от процессов, поэтому их можно безопасно
+	экспортировать из общей точки входа.
+*/
+export * from '../errors.js'
+

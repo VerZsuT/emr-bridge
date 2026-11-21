@@ -2,9 +2,9 @@
 
 import { ipcMain } from 'electron'
 
-import { PublishMethodsUnavailableError } from '../../errors.js'
-import type { EventListener, EventUnsubscribe, HasSnapshotClass, IEntitiesInfo, IRequest, IResult } from '../../types.js'
-import { Env, Errors, IpcChannel, IpcEventInMain, IpcResult, Transfer, WebContentsEventsContainer } from '../helpers/index.js'
+import { NoGetAccessError, PublishMethodsUnavailableError, TrySetReadonlyError } from '../../errors.js'
+import type { EventListener, EventUnsubscribe, HasSnapshotClass, IEntitiesInfo, IResult } from '../../types.js'
+import { Env, Errors, IpcChannel, IpcEventInMain, IpcPayload, IpcResult, Names, Transfer, WebContentsEventsContainer } from '../helpers/index.js'
 
 /**
  * Информация о сущностях.
@@ -26,10 +26,67 @@ const canThrowError = (Env.hasWindow || !ipcMain)
     ? Errors.getThrower(PublishMethodsUnavailableError)
     : () => {}
 
+/**
+ * Безопасно отправить результат в канал `renderer` процесса.
+ * @param sender - Получатель.
+ * @param channel - IPC канал.
+ * @param result - Результат.
+ */
+function sendToRenderer(sender: Electron.WebContents | undefined, channel: string, result: IResult): void {
+    if (!sender || sender.isDestroyed()) {
+        return
+    }
+
+    try {
+        sender.send(channel, result)
+    } catch {
+        // Получатель мог быть уничтожен между проверкой и отправкой.
+    }
+}
+
+/**
+ * Создать результат со значением, не выбрасывая исключение наружу.
+ * @param value - Значение.
+ * @param id - Уникальный идентификатор.
+ */
+function createValueResult(value: unknown, id?: string): IResult {
+    try {
+        return IpcResult.createWithValue(value, id)
+    } catch (error) {
+        return IpcResult.createWithError(error, id)
+    }
+}
+
 if (ipcMain) {
     ipcMain.on(IpcChannel.publicInfo.get(), event => new IpcEventInMain(event).return(entitiesInfo))
-    ipcMain.on(IpcChannel.event.on(), (event, { value }: IResult) => eventsContainer.addOn(value, event.sender))
-    ipcMain.on(IpcChannel.event.once(), (event, { value }: IResult) => eventsContainer.addOn(value, event.sender))
+
+    ipcMain.on(IpcChannel.event.on(), (event, payload) => {
+        const name = IpcPayload.eventName(payload)
+
+        if (name) {
+            eventsContainer.addOn(name, event.sender)
+        }
+    })
+    ipcMain.on(IpcChannel.event.once(), (event, payload) => {
+        const name = IpcPayload.eventName(payload)
+
+        if (name) {
+            eventsContainer.addOnce(name, event.sender)
+        }
+    })
+    ipcMain.on(IpcChannel.event.off(), (event, payload) => {
+        const name = IpcPayload.eventName(payload)
+
+        if (!name) {
+            return
+        }
+
+        if (IpcPayload.eventType(payload) === 'once') {
+            eventsContainer.removeOnce(name, event.sender)
+        } else {
+            eventsContainer.removeOn(name, event.sender)
+        }
+    })
 }
 
 
@@ -40,35 +97,35 @@ if (ipcMain) {
  */
 export function emitEvent<T = unknown>(name: string, value?: T): void {
     canThrowError()
+    Names.validateEvent(name)
 
     const emitChannel = IpcChannel.event.emit(name)
+    // Подписчики фиксируются на момент вызова: слушатель, добавленный
+    // после `emitEvent`, не должен получить уже отправленное событие.
+    const senders = eventsContainer.getAll(name)
 
-    try {
-        if (value instanceof Promise) {
-            value
-                .then(val => {
-                    for (const sender of eventsContainer.getAll(name)) {
-                        sender.send(emitChannel, IpcResult.createWithValue(val))
-                    }
-                    eventsContainer.clearOnce(name)
-                })
-                .catch(reason => {
-                    eventsContainer.getAll(name).forEach(sender => sender.send(emitChannel, IpcResult.createWithError(reason)))
-                    eventsContainer.clearOnce(name)
-                })
-            
-            return
+    eventsContainer.clearOnce(name)
+
+    const deliver = (result: IResult): void => {
+        for (const sender of senders) {
+            sendToRenderer(sender, emitChannel, result)
+        }
+    }
+
+    if (Transfer.isPromiseLike(value)) {
+        try {
+            value.then(
+                result => deliver(createValueResult(result)),
+                reason => deliver(IpcResult.createWithError(reason))
+            )
+        } catch (error) {
+            deliver(IpcResult.createWithError(error))
         }
 
-        for (const sender of eventsContainer.getAll(name)) {
-            sender.send(emitChannel, IpcResult.createWithValue(value))
-        }
-        eventsContainer.clearOnce(name)
+        return
     }
-    catch (error: any) {
-        eventsContainer.getAll(name).forEach(sender => sender.send(emitChannel, IpcResult.createWithError(error)))
-        eventsContainer.clearOnce(name)
-    }
+
+    deliver(createValueResult(value))
 }
 
 /**
@@ -81,22 +138,12 @@ export function emitEvent<T = unknown>(name: string, value?: T): void {
 export function on<TValue = any>(
     name: string,
     listener: EventListener<TValue>,
-    receives?: HasSnapshotClass<TValue>
+    receives?: HasSnapshotClass<any>
 ): EventUnsubscribe {
     canThrowError()
+    Names.validateEvent(name)
 
-    const emitChannel = IpcChannel.event.emit(name)
-    const handler = (_: any, { value }: IResult<TValue>) => {
-        if (Transfer.isSnapshotValue(value) && receives) {
-            listener(Transfer.getFromSnapshot(value, receives) as TValue)
-        } else {
-            listener(value!)
-        }
-    }
-
-    ipcMain.on(emitChannel, handler)
-
-    return () => ipcMain.removeListener(emitChannel, handler)
+    return subscribeEvent(name, listener, receives, false)
 }
 
 /**
@@ -109,20 +156,65 @@ export function on<TValue = any>(
 export function once<TValue = any>(
     name: string,
     listener: EventListener<TValue>,
-    receives?: HasSnapshotClass<TValue>
+    receives?: HasSnapshotClass<any>
 ): EventUnsubscribe {
     canThrowError()
+    Names.validateEvent(name)
 
-    const emitChannel = IpcChannel.event.emit(name)
-    const handler = (_: any, { value }: IResult<TValue>) => {
-        if (Transfer.isSnapshotValue(value) && receives) {
-            listener(Transfer.getFromSnapshot(value, receives) as TValue)
-        } else {
-            listener(value!)
-        }
+    return subscribeEvent(name, listener, receives, true)
+}
+
+/**
+ * Подписаться на событие из `renderer` процесса.
+ * @param name - Имя события.
+ * @param listener - Обработчик.
+ * @param receives - Класс передаваемого значения.
+ * @param isOnce - Одноразовая подписка.
+ * @returns Функция отписки от события.
+ */
+function subscribeEvent<TValue>(
+    name: string,
+    listener: EventListener<TValue>,
+    receives: HasSnapshotClass<any> | undefined,
+    isOnce: boolean
+): EventUnsubscribe {
+    if (typeof listener !== 'function') {
+        throw new TypeError('Обработчик события должен быть функцией.')
     }
 
-    ipcMain.once(emitChannel, handler)
+    const emitChannel = IpcChannel.event.emit(name)
+    const handler = (_: unknown, payload: unknown) => {
+        const result = IpcPayload.result(payload)
+
+        if (!result) {
+            return
+        }
+
+        if (result.error) {
+            console.error(`[emr-bridge] Ошибка события '${name}':\n${result.error}`)
+            return
+        }
+
+        let value: unknown = result.value
+
+        if (Transfer.isSnapshotValue(result.value) && receives) {
+            try {
+                value = Transfer.getFromSnapshot(result.value, receives)
+            } catch (error) {
+                // Недоверенный снимок из renderer не должен ронять main процесс.
+                console.error(`[emr-bridge] Не удалось восстановить значение события '${name}'.`, error)
+                return
+            }
+        }
+
+        listener(value as TValue)
+    }
+
+    if (isOnce) {
+        ipcMain.once(emitChannel, handler)
+    } else {
+        ipcMain.on(emitChannel, handler)
+    }
 
     return () => ipcMain.removeListener(emitChannel, handler)
 }
@@ -139,38 +231,55 @@ export function publishFunction<TFunc extends (...args: any[]) => any>(
     receives: HasSnapshotClass[] = []
 ): void {
     canThrowError()
+    Names.validateEntity(name)
+
+    if (typeof func !== 'function') {
+        throw new TypeError(`Публикуемая функция '${name}' должна быть функцией.`)
+    }
+
+    if (!Array.isArray(receives)) {
+        throw new TypeError('`receives` должен быть массивом классов.')
+    }
 
     const channel = IpcChannel.func.call(name)
 
     entitiesInfo.functions.add(name)
     ipcMain.removeAllListeners(channel)
-    ipcMain.on(channel, (e, { args, id }: IRequest) => {
+    ipcMain.on(channel, (e, payload) => {
         const event = new IpcEventInMain(e)
+        const request = IpcPayload.request(payload)
+
+        if (!request) {
+            event.return(IpcResult.createWithError(new TypeError('Некорректный запрос вызова функции.')))
+            return
+        }
+
         const receivesCopy = [...receives]
 
         try {
-            const preparedArgs = args.map(arg => (
+            const preparedArgs = request.args.map(arg => (
                 Transfer.isSnapshotValue(arg) && receivesCopy[0]
                 ? Transfer.getFromSnapshot(arg, receivesCopy.shift()!)
                 : arg
             ))
             const result = func(...preparedArgs)
 
-            if (result instanceof Promise) {
+            if (Transfer.isPromiseLike(result)) {
                 const promiseChannel = IpcChannel.promise.get(channel)
 
-                result
-                    .then(value => event.send(promiseChannel, IpcResult.createWithValue(value, id)))
-                    .catch(reason => event.send(promiseChannel, IpcResult.createWithError(reason, id)))
+                result.then(
+                    value => event.send(promiseChannel, createValueResult(value, request.id)),
+                    reason => event.send(promiseChannel, IpcResult.createWithError(reason, request.id))
+                )
 
                 event.return(IpcResult.createWithPromise(promiseChannel))
             }
             else {
-                event.return(IpcResult.createWithValue(result))
+                event.return(createValueResult(result, request.id))
             }
         }
-        catch (error: any) {
-            event.return(IpcResult.createWithError(error))
+        catch (error) {
+            event.return(IpcResult.createWithError(error, request.id))
         }
     })
 }
@@ -182,44 +291,65 @@ export function publishFunction<TFunc extends (...args: any[]) => any>(
  */
 export function publishVariable<T>(name: string, descriptor: TypedPropertyDescriptor<T>): void {
     canThrowError()
+    Names.validateEntity(name)
+
+    if (!descriptor || typeof descriptor !== 'object') {
+        throw new TypeError(`Не задан дескриптор переменной '${name}'.`)
+    }
 
     const getChannel = IpcChannel.prop.get(name)
     const setChannel = IpcChannel.prop.set(name)
-    const { set: setter, value } = descriptor
-    let { get: getter } = descriptor
+    const setter = typeof descriptor.set === 'function' ? descriptor.set : undefined
+    const getter = 'value' in descriptor
+        ? () => descriptor.value as T
+        : typeof descriptor.get === 'function'
+            ? descriptor.get
+            : undefined
 
     entitiesInfo.variables.add(name)
 
-    if (value) {
-        getter = () => value
-    }
+    // При повторной публикации старые обработчики должны быть удалены,
+    // иначе останется висеть доступ к прежнему значению.
+    ipcMain.removeAllListeners(getChannel)
+    ipcMain.removeAllListeners(setChannel)
 
-    if (getter) {
-        ipcMain.removeAllListeners(getChannel)
-        ipcMain.on(getChannel, e => {
-            const event = new IpcEventInMain(e)
+    ipcMain.on(getChannel, e => {
+        const event = new IpcEventInMain(e)
 
-            try {
-                event.return(IpcResult.createWithValue(getter()))
-            }
-            catch (error: any) {
-                event.return(IpcResult.createWithError(error))
-            }
-        })
-    }
+        if (!getter) {
+            event.return(IpcResult.createWithError(new NoGetAccessError(name)))
+            return
+        }
 
-    if (setter) {
-        ipcMain.removeAllListeners(setChannel)
-        ipcMain.on(setChannel, (e, { args }: IRequest) => {
-            const event = new IpcEventInMain(e)
+        try {
+            event.return(createValueResult(getter()))
+        }
+        catch (error) {
+            event.return(IpcResult.createWithError(error))
+        }
+    })
 
-            try {
-                setter(args.at(0))
-                event.return(IpcResult.createWithValue(null))
-            }
-            catch (error: any) {
-                event.return(IpcResult.createWithError(error))
-            }
-        })
-    }
+    ipcMain.on(setChannel, (e, payload) => {
+        const event = new IpcEventInMain(e)
+
+        if (!setter) {
+            event.return(IpcResult.createWithError(new TrySetReadonlyError(name)))
+            return
+        }
+
+        const request = IpcPayload.request(payload)
+
+        if (!request) {
+            event.return(IpcResult.createWithError(new TypeError('Некорректный запрос установки переменной.')))
+            return
+        }
+
+        try {
+            setter(request.args.at(0) as T)
+            event.return(IpcResult.createWithValue(null))
+        }
+        catch (error) {
+            event.return(IpcResult.createWithError(error))
+        }
+    })
 }

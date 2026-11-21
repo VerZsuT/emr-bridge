@@ -108,6 +108,11 @@ export interface IResult<TValue = any> {
      * Уникальный идентификатор.
      */
     id?: string
+
+    /**
+     * Тип подписки на событие (для канала отписки).
+     */
+    type?: 'on' | 'once'
 }
 
 /**

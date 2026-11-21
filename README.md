@@ -266,3 +266,11 @@ bridge.getHuman = bridge.returns(bridge.getHuman, Human)
 console.log(bridge.getHuman().name)
 */
 ```
+
+## Разработка
+
+```bash
+npm test          # тесты (Node.js 22.6+)
+npm run typecheck # проверка типов
+npm run compile   # сборка esm и cjs
+```
